@@ -5,29 +5,48 @@ from qwrapper.obs import PauliObservable
 from qwrapper.measurement import MeasurementMethod
 from qwrapper.circuit import QWrapper
 from qwrapper.circuit import init_circuit
+from qwrapper.optimizer import AdamOptimizer
 from gqe.ansatz import Ansatz
 from gqe.measurement import AncillaMeasurementMethod
 from gqe.sampler import OperatorSampler
 
 
 class GQE:
-    def __init__(self, mes_method: MeasurementMethod, nqubit,
-                 optimizer, N, n_sample, ntotal=0, tool="qulacs"):
+    def __init__(self, ansatz: Ansatz, mes_method: MeasurementMethod,
+                 N, n_sample, ntotal=0, tool="qulacs"):
+        self.ansatz = ansatz
         self.mes_method = mes_method
         self.ancilla_mes_method = AncillaMeasurementMethod(self.mes_method.hamiltonian)
-        self.optimizer = optimizer
         self.N = N
         self.n_sample = n_sample
-        self.nqubit = nqubit
+        self.nqubit = mes_method.hamiltonian.nqubit
         self.tool = tool
         self.ntotal = ntotal
-        self._targets = [j for j in range(nqubit)]
+        self._targets = [j for j in range(self.nqubit)]
 
-    def step(self, ansatz: Ansatz):
-        sampler = OperatorSampler(ansatz)
-        tau = ansatz.lam() / self.N
+    def run(self, optimizer: AdamOptimizer):
+        optimizer.do_optimize(self.gradient, self.ansatz.h_vec, self.cost)
+
+    def cost(self, params):
+        ansatz = self.ansatz.copy()
+        ansatz.h_vec = params
+        sampler = OperatorSampler(self.ansatz)
+        tau = self.ansatz.lam() / self.N
+        operators = self._to_time_evolution(sampler.sample(self.N), tau)
+
+        def prepare():
+            qc = init_circuit(self.nqubit, self.tool)
+            for o in operators:
+                o.add_circuit(qc)
+
+        return self.mes_method.get_value(prepare, ntotal=self.ntotal)
+
+    def gradient(self, params):
+        self.ansatz.h_vec = params
+        sampler = OperatorSampler(self.ansatz)
+        tau = self.ansatz.lam() / self.N
         offset = self.operator_gradient(sampler, tau)
-        grad_vec = [self.prob_gradient(j, sampler, tau) + offset for j in range(self.N)]
+        return [self.prob_gradient(j, sampler, tau) + offset for j in range(self.N)]
 
     def operator_gradient(self, sampler, tau):
         res = 0

@@ -11,7 +11,8 @@ class OperatorSampler:
     def sample(self, count=1):
         res = []
         for j in range(count):
-            res.append(self.operators[self.sampler.sample_index()])
+            index = self.sampler.sample_index()
+            res.append(self.operators[index])
         return res
 
     def get(self, j):

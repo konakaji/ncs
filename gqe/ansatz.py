@@ -1,4 +1,5 @@
 from qwrapper.obs import PauliObservable
+from qwrapper.operator import ControllablePauli
 
 
 class Ansatz:
@@ -13,7 +14,9 @@ class Ansatz:
         rs = []
         for j, h in enumerate(self.h_vec):
             if h < 0:
-                rs.append(self._o_vec[j])
+                rs.append(ControllablePauli(self._o_vec[j].p_string, -1 * self._o_vec[j].sign))
+            else:
+                rs.append(ControllablePauli(self._o_vec[j].p_string, self._o_vec[j].sign))
         return rs
 
     def lam(self):

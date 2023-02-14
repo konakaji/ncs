@@ -1,16 +1,17 @@
-# This is a sample Python script.
+import random, math
 
-# Press ⌃R to execute it or replace it with your code.
-# Press Double ⇧ to search everywhere for classes, files, tool windows, actions, and settings.
+from qwrapper.obs import PauliObservable, Hamiltonian
+from qwrapper.optimizer import AdamOptimizer
+from gqe.gqe import GQE
+from gqe.ansatz import Ansatz
+from gqe.measurement import MeasurementMethod
 
-
-def print_hi(name):
-    # Use a breakpoint in the code line below to debug your script.
-    print(f'Hi, {name}')  # Press ⌘F8 to toggle the breakpoint.
-
-
-# Press the green button in the gutter to run the script.
 if __name__ == '__main__':
-    print_hi('PyCharm')
-
-# See PyCharm help at https://www.jetbrains.com/help/pycharm/
+    N = 1000
+    n_sample = 100
+    ansatz = Ansatz([random.gauss(0, 1), random.gauss(0, 1), random.gauss(0, 1)],
+                    [PauliObservable("X"), PauliObservable("Y"), PauliObservable("Z")])
+    hamiltonian = Hamiltonian([1], [PauliObservable("X")], 1)
+    mes = MeasurementMethod(hamiltonian)
+    gqe = GQE(ansatz, mes, N, n_sample)
+    gqe.run(AdamOptimizer(maxiter=100))

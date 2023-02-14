@@ -1,4 +1,4 @@
-import random
+import random, numpy as np
 
 from qwrapper.operator import PauliTimeEvolution
 from qwrapper.obs import PauliObservable
@@ -38,6 +38,7 @@ class GQE:
             qc = init_circuit(self.nqubit, self.tool)
             for o in operators:
                 o.add_circuit(qc)
+            return qc
 
         return self.mes_method.get_value(prepare, ntotal=self.ntotal)
 
@@ -46,25 +47,25 @@ class GQE:
         sampler = OperatorSampler(self.ansatz)
         tau = self.ansatz.lam() / self.N
         offset = self.operator_gradient(sampler, tau)
-        return [self.prob_gradient(j, sampler, tau) + offset for j in range(self.N)]
+        return np.array([self.prob_gradient(j, sampler, tau) + offset for j in range(len(params))])
 
     def operator_gradient(self, sampler, tau):
         res = 0
-        for _ in self.n_sample:
-            res += self._operator_gradient(sampler, tau)
+        for _ in range(self.n_sample):
+            res += self._operator_gradient(sampler, tau) / self.n_sample
         return res
 
     def prob_gradient(self, j, sampler, tau):
         res = 0
-        for _ in self.n_sample:
-            res += self._prob_gradient(j, sampler, tau)
+        for _ in range(self.n_sample):
+            res += self._prob_gradient(j, sampler, tau) / self.n_sample
         return res
 
     def _prob_gradient(self, j, sampler, tau):
         l = random.randint(1, self.N)
         former = self._to_time_evolution(sampler.sample(l - 1), tau)
         latter = self._to_time_evolution(sampler.sample(self.N - l), tau)
-        j_evolution = self._to_time_evolution(sampler.get(j), tau)[0]
+        j_evolution = self._to_time_evolution([sampler.get(j)], tau)[0]
         one_evolution = self._to_time_evolution(sampler.sample(1), tau)[0]
 
         def prepare_first():
@@ -85,34 +86,39 @@ class GQE:
                 o.add_circuit(qc)
             return qc
 
-        return (self.mes_method.get_value(prepare_first, self.ntotal)
-                - self.mes_method.get_value(prepare_second, self.ntotal)) / tau
+        val = (self.mes_method.get_value(prepare_first, self.ntotal)
+               - self.mes_method.get_value(prepare_second, self.ntotal)) / tau
+        return val
 
     def _operator_gradient(self, sampler, tau):
         l = random.randint(1, self.N)
         ancilla = self.nqubit
         former = self._to_time_evolution(sampler.sample(l), tau)
-        pauli = sampler.sample(1)
+        pauli = sampler.sample(1)[0]
         latter = self._to_time_evolution(sampler.sample(self.N - l), tau)
 
         def prepare_first():
             qc = init_circuit(self.nqubit + 1, self.tool)
+            qc.h(ancilla)
             for o in former:
                 o.add_circuit(qc)
             self._add_swift_gate(qc, pauli, 0, ancilla)
             for o in latter:
                 o.add_circuit(qc)
+            return qc
 
         def prepare_second():
             qc = init_circuit(self.nqubit + 1, self.tool)
+            qc.h(ancilla)
             for o in former:
                 o.add_circuit(qc)
             self._add_swift_gate(qc, pauli, 1, ancilla)
             for o in latter:
                 o.add_circuit(qc)
+            return qc
 
-        return self.ancilla_mes_method.get_value(prepare_first, self.ntotal) - self.ancilla_mes_method.get_value(
-            prepare_second, self.ntotal)
+        return self.ancilla_mes_method.get_value(prepare_first, self.ntotal) \
+               + self.ancilla_mes_method.get_value(prepare_second, self.ntotal)
 
     def _add_swift_gate(self, qc: QWrapper, pauli, b, ancilla):
         qc.s(ancilla)

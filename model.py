@@ -2,7 +2,7 @@ import math
 import random
 from qwrapper.circuit import init_circuit
 from qwrapper.obs import PauliObservable
-from sampler import DefaultImportantSampler
+from gqe.sampler import DefaultImportantSampler
 import torch
 from torch import nn, optim
 
@@ -101,16 +101,16 @@ class ProbGenerator(nn.Module):
 
 
 if __name__ == '__main__':
-    l_size = 1
-    h_size = 50
+    l_size = 10
+    h_size = 200
     o_size = 4
     N = 200
-    t = 2 * math.pi
+    t = 3 * math.pi
     n_step = 100
     n_sample = 100
 
     G = ProbGenerator(l_size, h_size, o_size)
-    optimizer = optim.SGD(G.parameters(), lr=0.01, momentum=0)
+    optimizer = optim.SGD(G.parameters(), lr=0.001, momentum=0.5)
     for j in range(n_step):
         for _ in range(n_sample):
             optimizer.zero_grad()

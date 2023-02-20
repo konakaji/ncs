@@ -28,11 +28,12 @@ class GQE:
         optimizer.do_optimize(self.gradient, self.ansatz.h_vec, self.cost)
 
     def cost(self, params):
+        N = 3000
         ansatz = self.ansatz.copy()
         ansatz.h_vec = params
         sampler = OperatorSampler(self.ansatz)
-        tau = self.ansatz.lam() / self.N
-        operators = self._to_time_evolution(sampler.sample(self.N), tau)
+        tau = self.ansatz.lam() / N
+        operators = self._to_time_evolution(sampler.sample(N), tau)
 
         def prepare():
             qc = init_circuit(self.nqubit, self.tool)
@@ -47,7 +48,14 @@ class GQE:
         sampler = OperatorSampler(self.ansatz)
         tau = self.ansatz.lam() / self.N
         offset = self.operator_gradient(sampler, tau)
-        return np.array([self.prob_gradient(j, sampler, tau) + offset for j in range(len(params))])
+        res = np.array([self.prob_gradient(j, sampler, tau) + offset for j in range(len(params))])
+        results = []
+        for h, r in zip(self.ansatz.h_vec, res):
+            if h < 0:
+                results.append(-r)
+            else:
+                results.append(r)
+        return np.array(results)
 
     def operator_gradient(self, sampler, tau):
         res = 0
@@ -75,6 +83,7 @@ class GQE:
             j_evolution.add_circuit(qc)
             for o in latter:
                 o.add_circuit(qc)
+            qc.draw_and_show()
             return qc
 
         def prepare_second():

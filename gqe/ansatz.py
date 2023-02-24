@@ -19,11 +19,5 @@ class Ansatz:
                 rs.append(ControllablePauli(self._o_vec[j].p_string, self._o_vec[j].sign))
         return rs
 
-    def lam(self):
-        res = 0
-        for h in self.get_positive_h_vec():
-            res += h
-        return res
-
     def copy(self):
         return Ansatz(self.h_vec, self._o_vec)

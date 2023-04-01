@@ -34,7 +34,7 @@ class GQE:
         self.ansatz.h_vec = params
         if sum(self.ansatz.get_positive_h_vec()) > self._lam():
             raise AttributeError('sum of h became larger than h_vec')
-        sampler = OperatorSampler(self.ansatz, self._lam(), self.nqubit)
+        sampler = OperatorSampler(self.ansatz, self.N, self._lam(), self.nqubit)
         res = np.array([self.prob_gradient(j, sampler, self.tau) for j in range(len(params))])
         results = []
         for h, r in zip(self.ansatz.h_vec, res):
@@ -55,7 +55,7 @@ class GQE:
         ansatz.h_vec = params
 
         def prepare():
-            sampler = OperatorSampler(self.ansatz, self._lam(), self.nqubit)
+            sampler = OperatorSampler(self.ansatz, self.N, self._lam(), self.nqubit)
             operators = self._to_time_evolution(sampler.sample(self.N), self.tau)
             qc = init_circuit(self.nqubit, self.tool)
             for o in operators:

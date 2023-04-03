@@ -56,10 +56,6 @@ class SimpleSampler(Sampler):
             res.append(self.evolutions[index])
         return res
 
-    @DeprecationWarning
-    def sample(self, count=1):
-        return self.sample_operators(count)
-
     def get(self, j):
         return self.operators[j]
 

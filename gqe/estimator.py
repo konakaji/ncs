@@ -1,7 +1,7 @@
 import abc
 from abc import abstractmethod
 
-from qwrapper.circuit import init_circuit
+from qwrapper.circuit import init_circuit, QWrapper
 from qwrapper.obs import Hamiltonian
 from qwrapper.operator import PauliTimeEvolution, ControllablePauli
 from gqe.measurement import MeasurementMethod, AncillaMeasurementMethod
@@ -9,12 +9,12 @@ import random, sys
 
 
 class Initializer:
-    def initialize(self, qc, targets):
+    def initialize(self, qc, targets) -> QWrapper:
         return qc
 
 
 class XInitializer(Initializer):
-    def initialize(self, qc, targets):
+    def initialize(self, qc, targets) -> QWrapper:
         for t in targets:
             qc.h(t)
         return qc
@@ -46,9 +46,8 @@ class EnergyEstimator:
 
 
 class QDriftEstimator(EnergyEstimator):
-    def __init__(self, hamiltonian: Hamiltonian, N, lam, tool='qulacs', shot=0):
+    def __init__(self, hamiltonian: Hamiltonian, N, tool='qulacs', shot=0):
         super().__init__(hamiltonian)
-        self.lam = lam
         self.nqubit = hamiltonian.nqubit
         self.mes_method = MeasurementMethod(hamiltonian)
         self.ancilla_mes_method = AncillaMeasurementMethod(hamiltonian)
@@ -73,23 +72,27 @@ class QDriftEstimator(EnergyEstimator):
             pos = random.randint(0, self.N - 1)
             qc = self.initializer.initialize(init_circuit(self.nqubit + 1, tool=self.tool),
                                              targets=self._targets)
+            qc.h(self._ancilla)
             evolutions = sampler.sample_time_evolutions(self.N)
             for j in range(self.N):
                 if j == pos:
                     self._add_swift_operator(qc, sampler.get(index))
                     continue
                 evolutions[j].add_circuit(qc)
+            return qc
 
         def prepare_inverse():
             pos = random.randint(0, self.N - 1)
             qc = self.initializer.initialize(init_circuit(self.nqubit + 1, tool=self.tool),
                                              targets=self._targets)
+            qc.h(self._ancilla)
             evolutions = sampler.sample_time_evolutions(self.N)
             for j in range(self.N):
                 if j == pos:
                     self._add_swift_operator(qc, sampler.get(index), True)
                     continue
                 evolutions[j].add_circuit(qc)
+            return qc
 
         seed = random.randint(0, sys.maxsize)
         return (self.ancilla_mes_method.get_value(prepare, ntotal=self.shot,

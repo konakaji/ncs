@@ -4,11 +4,13 @@ from typing import Any
 
 import torch
 import torch.optim as optim
+from pytorch_lightning.utilities.types import STEP_OUTPUT
 from torch import nn
 from qwrapper.sampler import DefaultImportantSampler
 import pytorch_lightning as pl
+from pytorch_lightning.callbacks import Callback
 from qwrapper.operator import ControllablePauli, PauliTimeEvolution, PauliObservable
-from gqe.estimator import EnergyEstimator, Sampler, QDriftEstimator
+from gqe.estimator import EnergyEstimator, Sampler
 import emcee, sys, math, numpy as np
 
 
@@ -227,19 +229,29 @@ class DeepMCMCSampler(Sampler):
         return result
 
 
+class PrintEnergy(Callback):
+    def __init__(self, sampler: NaiveSampler, estimator: EnergyEstimator, n_samples):
+        self.sampler = sampler
+        self.estimator = estimator
+        self.n_samples = n_samples
+
+    def on_train_batch_end(self, trainer: "pl.Trainer", pl_module: "pl.LightningModule", outputs: STEP_OUTPUT,
+                           batch: Any, batch_idx: int) -> None:
+        values = []
+        for j in range(self.n_samples):
+            values.append(self.estimator.value(self.sampler))
+        print(np.mean(values))
+        super().on_train_batch_end(trainer, pl_module, outputs, batch, batch_idx)
+
+
 class EnergyModel(pl.LightningModule):
-    def __init__(self, network: torch.nn.ModuleList, estimator: EnergyEstimator,
-                 beta, N, lam, n_qubit, n_samples, lr=1e-4, beta1=0.0):
+    def __init__(self, sampler: NaiveSampler, estimator: EnergyEstimator, n_samples, lr=1e-4, beta1=0.0):
         super().__init__()
         self.save_hyperparameters()
-        self.network = network
+        self.network = sampler.nn
         self.estimator = estimator
-        self.beta = beta
-        self.N = N
-        self.lam = lam
         self.n_samples = n_samples
-        self.sampler = NaiveSampler(self.network, N, lam, beta, n_qubit)
-        # self.sampler = DeepMCMCSampler(self.network, N, lam, beta, n_qubit)
+        self.sampler = sampler
 
     def forward(self, paulis) -> Any:
         return self.network.forward(paulis)
@@ -256,16 +268,10 @@ class EnergyModel(pl.LightningModule):
         indices = self.sampler.sample_indices(self.n_samples)
         unique, counts = np.unique(indices, return_counts=True)
         print(dict(zip(unique, counts)))
-        fs = self.network.forward(self.sampler.get_all(indices))
+        fs = self.sampler.nn.forward(self.sampler.get_all(indices))
         mean = fs.mean()
         gs = []
         for index in indices:
             gs.append(self.estimator.grad(self.sampler, index))
-        loss = -self.lam * self.beta * torch.dot(torch.flatten(fs) - mean, torch.tensor(gs, dtype=torch.float32)) / len(
-            indices)
-        values = []
-        print(loss)
-        for j in range(self.n_samples):
-            values.append(self.estimator.value(self.sampler))
-        print(np.mean(values))
+        loss = -torch.dot(torch.flatten(fs) - mean, torch.tensor(gs, dtype=torch.float32)) / len(indices)
         return loss

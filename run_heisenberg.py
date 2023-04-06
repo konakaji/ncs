@@ -3,14 +3,13 @@ import random
 from qwrapper.obs import PauliObservable, Hamiltonian
 from qwrapper.hamiltonian import HeisenbergModel
 from qwrapper.optimizer import AdamOptimizer, UnitLRScheduler, PrintMonitor, FileMonitor
-from gqe.gqe import GQE
 from gqe.simplemodel import SimpleModel, Ansatz
 from gqe.estimator import QDriftEstimator
 from gqe.measurement import MeasurementMethod
 
 if __name__ == '__main__':
     N = 2000
-    n_sample = 100
+    n_sample = 1
     lam = 5
     nqubit = 2
     ansatz = Ansatz([random.gauss(0, 0.5) for _ in range(9)],

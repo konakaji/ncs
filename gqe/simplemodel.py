@@ -42,6 +42,13 @@ class SimpleSampler(Sampler):
         self.evolutions = [PauliTimeEvolution(o, lam / N) for o in operators]
         self.sampler = DefaultImportantSampler(self.hs)
 
+    def sample_indices(self, count=1):
+        res = []
+        for j in range(count):
+            index = self.sampler.sample_index()
+            res.append(index)
+        return res
+
     def sample_operators(self, count=1) -> [ControllablePauli]:
         res = []
         for j in range(count):

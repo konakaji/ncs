@@ -1,6 +1,6 @@
 import abc
 from abc import abstractmethod
-
+import numpy as np
 from qwrapper.circuit import init_circuit, QWrapper
 from qwrapper.obs import Hamiltonian
 from qwrapper.operator import PauliTimeEvolution, ControllablePauli
@@ -22,6 +22,10 @@ class XInitializer(Initializer):
 
 class Sampler(abc.ABC):
     @abstractmethod
+    def sample_indices(self, count=1):
+        pass
+
+    @abstractmethod
     def sample_operators(self, count=1) -> [ControllablePauli]:
         pass
 
@@ -34,14 +38,20 @@ class Sampler(abc.ABC):
         pass
 
 
-class EnergyEstimator:
+class EnergyEstimator(abc.ABC):
     def __init__(self, hamiltonian: Hamiltonian):
         self.hamiltonian = hamiltonian
 
+    @abstractmethod
     def value(self, sampler: Sampler):
         pass
 
+    @abstractmethod
     def grad(self, sampler: Sampler, index):
+        pass
+
+    @abstractmethod
+    def grads(self, sampler: Sampler):
         pass
 
 
@@ -68,6 +78,36 @@ class QDriftEstimator(EnergyEstimator):
         return self.mes_method.get_value(prepare, ntotal=self.shot)
 
     def grad(self, sampler: Sampler, index):
+        seed = random.randint(0, sys.maxsize)
+        get_operator_func = self._get_operator(sampler, index)
+        return (self.ancilla_mes_method.get_value(self._get_prepare(sampler, get_operator_func, False),
+                                                  ntotal=self.shot,
+                                                  seed=seed)
+                + self.ancilla_mes_method.get_value(
+                    self._get_prepare(sampler, get_operator_func, True), ntotal=self.shot, seed=seed)) / 2
+
+    def grads(self, sampler: Sampler):
+        indices = []
+        seed = random.randint(0, sys.maxsize)
+
+        def get_operator():
+            index = sampler.sample_indices(1)[0]
+            indices.append(index)
+            return sampler.get(index)
+
+        def get_operator_inv():
+            index = sampler.sample_indices(1)[0]
+            return sampler.get(index)
+
+        values = (np.array(
+            self.ancilla_mes_method.get_values(self._get_prepare(sampler, get_operator, False), ntotal=self.shot,
+                                               seed=seed)) -
+                  np.array(self.ancilla_mes_method.get_values(self._get_prepare(sampler, get_operator_inv, True),
+                                                              ntotal=self.shot,
+                                                              seed=seed))) / 2
+        return values, indices
+
+    def _get_prepare(self, sampler, get_operator, inverse):
         def prepare():
             pos = random.randint(0, self.N - 1)
             qc = self.initializer.initialize(init_circuit(self.nqubit + 1, tool=self.tool),
@@ -76,29 +116,19 @@ class QDriftEstimator(EnergyEstimator):
             evolutions = sampler.sample_time_evolutions(self.N)
             for j in range(self.N):
                 if j == pos:
-                    self._add_swift_operator(qc, sampler.get(index))
+                    operator = get_operator()
+                    self._add_swift_operator(qc, operator, inverse)
                     continue
                 evolutions[j].add_circuit(qc)
             return qc
 
-        def prepare_inverse():
-            pos = random.randint(0, self.N - 1)
-            qc = self.initializer.initialize(init_circuit(self.nqubit + 1, tool=self.tool),
-                                             targets=self._targets)
-            qc.h(self._ancilla)
-            evolutions = sampler.sample_time_evolutions(self.N)
-            for j in range(self.N):
-                if j == pos:
-                    self._add_swift_operator(qc, sampler.get(index), True)
-                    continue
-                evolutions[j].add_circuit(qc)
-            return qc
+        return prepare
 
-        seed = random.randint(0, sys.maxsize)
-        return (self.ancilla_mes_method.get_value(prepare, ntotal=self.shot,
-                                                  seed=seed) + self.ancilla_mes_method.get_value(prepare_inverse,
-                                                                                                 ntotal=self.shot,
-                                                                                                 seed=seed)) / 2
+    def _get_operator(self, sampler, index):
+        def get_operator():
+            return sampler.get(index)
+
+        return get_operator
 
     def _add_swift_operator(self, qc, operator, inverse=False):
         qc.s(self._ancilla)

@@ -29,8 +29,9 @@ if __name__ == '__main__':
 
     N = 2000
     sampler = NaiveSampler(PauliEnergy(nqubit), N, lam=6, beta=10, nqubit=nqubit)
-    estimator = QDriftEstimator(HeisenbergModel(2), N)
+    estimator = QDriftEstimator(HeisenbergModel(2), N, tool='qulacs-gpu')
     model = EnergyModel(sampler, estimator=estimator, n_samples=100)
+    model = model.to(device)
 
     trainer = pl.Trainer(default_root_dir=os.path.join(CHECKPOINT_PATH, "deep"),
                          accelerator="gpu" if str(device).startswith("cuda") else "cpu",

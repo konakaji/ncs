@@ -2,6 +2,7 @@ venv
 .idea/*
 common/.*
 *.pyc
+.*
 data/*
 tutorial/*
 saved_models/*

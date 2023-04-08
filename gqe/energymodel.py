@@ -22,9 +22,9 @@ class PauliEnergy(nn.ModuleList):
         self.encoder = OneHotEncoder()
         self.gpu = gpu
         # self.LSTM_layers = 1
-        self.fc1 = nn.Linear(in_features=4 * nqubit, out_features=self.hidden_dim)
-        self.fc3 = nn.Linear(in_features=self.hidden_dim, out_features=self.hidden_dim)
-        self.fc2 = nn.Linear(self.hidden_dim, 1)
+        self.fc1 = nn.Linear(in_features=4 * nqubit, out_features=self.hidden_dim).to('cuda')
+        self.fc3 = nn.Linear(in_features=self.hidden_dim, out_features=self.hidden_dim).to('cuda')
+        self.fc2 = nn.Linear(self.hidden_dim, 1).to('cuda')
 
     def forward(self, paulis: [PauliObservable]):
         # Hidden and cell state definion
@@ -38,7 +38,7 @@ class PauliEnergy(nn.ModuleList):
         # The last hidden state is taken
         # out = torch.relu_(self.fc1(out[:, -1, :]))
         out = self.encoder.encode(paulis)
-        out = out.view(out.size(0), -1)
+        out = out.view(out.size(0), -1).to('cuda')
         out = self.fc1(out)
         out = torch.relu(out)
         out = self.fc3(out)

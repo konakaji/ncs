@@ -80,11 +80,15 @@ class QDriftEstimator(EnergyEstimator):
     def grad(self, sampler: Sampler, index):
         seed = random.randint(0, sys.maxsize)
         get_operator_func = self._get_operator(sampler, index)
-        return (self.ancilla_mes_method.get_value(self._get_prepare(sampler, get_operator_func, False),
+        import time
+        now = time.time()
+        t_1 = self.ancilla_mes_method.get_value(self._get_prepare(sampler, get_operator_func, False),
                                                   ntotal=self.shot,
                                                   seed=seed)
-                + self.ancilla_mes_method.get_value(
-                    self._get_prepare(sampler, get_operator_func, True), ntotal=self.shot, seed=seed)) / 2
+        print('exec', time.time() - now)
+        t_2 = self.ancilla_mes_method.get_value(
+                    self._get_prepare(sampler, get_operator_func, True), ntotal=self.shot, seed=seed)
+        return (t_1 + t_2)/2
 
     def grads(self, sampler: Sampler):
         indices = []
@@ -98,7 +102,6 @@ class QDriftEstimator(EnergyEstimator):
         def get_operator_inv():
             index = sampler.sample_indices(1)[0]
             return sampler.get(index)
-
         values = (np.array(
             self.ancilla_mes_method.get_values(self._get_prepare(sampler, get_operator, False), ntotal=self.shot,
                                                seed=seed)) -
@@ -113,6 +116,8 @@ class QDriftEstimator(EnergyEstimator):
             qc = self.initializer.initialize(init_circuit(self.nqubit + 1, tool=self.tool),
                                              targets=self._targets)
             qc.h(self._ancilla)
+            import time
+            now = time.time()
             evolutions = sampler.sample_time_evolutions(self.N)
             for j in range(self.N):
                 if j == pos:

@@ -15,11 +15,12 @@ import emcee, sys, math, numpy as np
 
 
 class PauliEnergy(nn.ModuleList):
-    def __init__(self, nqubit, hidden_dim=100) -> None:
+    def __init__(self, nqubit, hidden_dim=100, gpu=False) -> None:
         super().__init__()
 
         self.hidden_dim = hidden_dim
         self.encoder = OneHotEncoder()
+        self.gpu = gpu
         # self.LSTM_layers = 1
         self.fc1 = nn.Linear(in_features=4 * nqubit, out_features=self.hidden_dim)
         self.fc3 = nn.Linear(in_features=self.hidden_dim, out_features=self.hidden_dim)

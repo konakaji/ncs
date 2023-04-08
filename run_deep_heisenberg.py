@@ -39,6 +39,6 @@ if __name__ == '__main__':
                          gradient_clip_val=0.1,
                          callbacks=[
                              LearningRateMonitor("epoch"),
-                             PrintEnergy(sampler, estimator, 100)
+                             PrintEnergy(sampler, estimator, 100, torch.cuda.is_available())
                          ])
     trainer.fit(model, train_dataloaders=dataloader)

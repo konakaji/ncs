@@ -9,6 +9,8 @@ from gqe.energy_model.network import PauliEnergy
 from gqe.energy_estimator.qdrift import QDriftEstimator
 from qwrapper.hamiltonian import HeisenbergModel
 
+device = torch.device("cuda:0") if torch.cuda.is_available() else torch.device("cpu")
+
 
 class VoidDataset(Dataset):
     def __init__(self, count=10):
@@ -23,17 +25,15 @@ class VoidDataset(Dataset):
 
 if __name__ == '__main__':
     nqubit = 3
-    CHECKPOINT_PATH = "../../saved_models/"
-    device = torch.device("cuda:0") if torch.cuda.is_available() else torch.device("cpu")
-    pl.seed_everything(42)
+    N = 8000
 
     # dummy data loader
     dataloader = DataLoader(VoidDataset(), batch_size=1, shuffle=False, num_workers=0)
-
-    N = 8000
-    sampler = NaiveSampler(PauliEnergy(nqubit, 100, gpu=torch.cuda.is_available()), N, lam=12, beta=10,
-                           nqubit=nqubit)
+    # Sampler that samples from generative model
+    sampler = NaiveSampler(PauliEnergy(nqubit, 100, gpu=torch.cuda.is_available()), N, lam=12, beta=10, nqubit=nqubit)
+    # Energy estimator
     estimator = QDriftEstimator(HeisenbergModel(nqubit), N, tool='qulacs')
+    # Energy model
     model = EnergyModel(sampler, estimator=estimator, n_samples=100, lr=1e-4).to(device)
 
     recorder = RecordEnergy(sampler, estimator, 100)
@@ -47,5 +47,6 @@ if __name__ == '__main__':
         callbacks=[
             recorder
         ])
+    pl.seed_everything(42)
     trainer.fit(model, train_dataloaders=dataloader)
     recorder.save('output/deep_energy.tsv')

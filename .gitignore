@@ -1,8 +1,11 @@
 venv
 .idea/*
 common/.*
+output/*
 *.pyc
 .*
+lightning_logs/*
+!.dvc
 data/*
 tutorial/*
 saved_models/*

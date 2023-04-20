@@ -1,58 +1,11 @@
-import abc
-from abc import abstractmethod
 import numpy as np
-from qwrapper.circuit import init_circuit, QWrapper
+from qwrapper.circuit import init_circuit
 from qwrapper.obs import Hamiltonian
-from qwrapper.operator import PauliTimeEvolution, ControllablePauli
+
+from gqe.energy_estimator.ee import Sampler, EnergyEstimator
+from gqe.energy_estimator.initializer import XInitializer
 from gqe.measurement import MeasurementMethod, AncillaMeasurementMethod
 import random, sys
-
-
-class Initializer:
-    def initialize(self, qc, targets) -> QWrapper:
-        return qc
-
-
-class XInitializer(Initializer):
-    def initialize(self, qc, targets) -> QWrapper:
-        for t in targets:
-            qc.h(t)
-        return qc
-
-
-class Sampler(abc.ABC):
-    @abstractmethod
-    def sample_indices(self, count=1):
-        pass
-
-    @abstractmethod
-    def sample_operators(self, count=1) -> [ControllablePauli]:
-        pass
-
-    @abstractmethod
-    def sample_time_evolutions(self, count=1) -> [PauliTimeEvolution]:
-        pass
-
-    @abstractmethod
-    def get(self, index) -> ControllablePauli:
-        pass
-
-
-class EnergyEstimator(abc.ABC):
-    def __init__(self, hamiltonian: Hamiltonian):
-        self.hamiltonian = hamiltonian
-
-    @abstractmethod
-    def value(self, sampler: Sampler):
-        pass
-
-    @abstractmethod
-    def grad(self, sampler: Sampler, index):
-        pass
-
-    @abstractmethod
-    def grads(self, sampler: Sampler):
-        pass
 
 
 class QDriftEstimator(EnergyEstimator):
@@ -80,15 +33,12 @@ class QDriftEstimator(EnergyEstimator):
     def grad(self, sampler: Sampler, index):
         seed = random.randint(0, sys.maxsize)
         get_operator_func = self._get_operator(sampler, index)
-        import time
-        now = time.time()
         t_1 = self.ancilla_mes_method.get_value(self._get_prepare(sampler, get_operator_func, False),
-                                                  ntotal=self.shot,
-                                                  seed=seed)
-        print('exec', time.time() - now)
+                                                ntotal=self.shot,
+                                                seed=seed)
         t_2 = self.ancilla_mes_method.get_value(
-                    self._get_prepare(sampler, get_operator_func, True), ntotal=self.shot, seed=seed)
-        return (t_1 + t_2)/2
+            self._get_prepare(sampler, get_operator_func, True), ntotal=self.shot, seed=seed)
+        return (t_1 + t_2) / 2
 
     def grads(self, sampler: Sampler):
         indices = []
@@ -102,6 +52,7 @@ class QDriftEstimator(EnergyEstimator):
         def get_operator_inv():
             index = sampler.sample_indices(1)[0]
             return sampler.get(index)
+
         values = (np.array(
             self.ancilla_mes_method.get_values(self._get_prepare(sampler, get_operator, False), ntotal=self.shot,
                                                seed=seed)) -
@@ -116,8 +67,6 @@ class QDriftEstimator(EnergyEstimator):
             qc = self.initializer.initialize(init_circuit(self.nqubit + 1, tool=self.tool),
                                              targets=self._targets)
             qc.h(self._ancilla)
-            import time
-            now = time.time()
             evolutions = sampler.sample_time_evolutions(self.N)
             for j in range(self.N):
                 if j == pos:

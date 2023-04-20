@@ -6,6 +6,7 @@ output/*
 .*
 lightning_logs/*
 !.dvc
+!.dvcignore
 data/*
 tutorial/*
 saved_models/*

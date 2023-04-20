@@ -23,20 +23,18 @@ class VoidDataset(Dataset):
 
 if __name__ == '__main__':
     nqubit = 3
-    CHECKPOINT_PATH = "../saved_models/"
+    CHECKPOINT_PATH = "../../saved_models/"
     device = torch.device("cuda:0") if torch.cuda.is_available() else torch.device("cpu")
     pl.seed_everything(42)
 
     # dummy data loader
-    dataloader = DataLoader(VoidDataset(), batch_size=1,
-                            shuffle=False, num_workers=0)
+    dataloader = DataLoader(VoidDataset(), batch_size=1, shuffle=False, num_workers=0)
 
     N = 8000
     sampler = NaiveSampler(PauliEnergy(nqubit, 100, gpu=torch.cuda.is_available()), N, lam=12, beta=10,
                            nqubit=nqubit)
     estimator = QDriftEstimator(HeisenbergModel(nqubit), N, tool='qulacs')
-    model = EnergyModel(sampler, estimator=estimator, n_samples=100, lr=1e-4)
-    model = model.to(device)
+    model = EnergyModel(sampler, estimator=estimator, n_samples=100, lr=1e-4).to(device)
 
     recorder = RecordEnergy(sampler, estimator, 100)
     trainer = pl.Trainer(

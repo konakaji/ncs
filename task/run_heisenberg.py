@@ -25,7 +25,7 @@ if __name__ == '__main__':
                     ], nqubit=nqubit)
     estimator = QDriftEstimator(hamiltonian, N, tool='qulacs')
     model = SimpleModel(estimator, ansatz, N, lam, n_sample)
-    monitors = [PrintMonitor(), FileMonitor('output/energy.txt')]
+    monitors = [PrintMonitor(), FileMonitor('../output/energy.txt')]
     model.run(AdamOptimizer(maxiter=200, scheduler=UnitLRScheduler(0.01), monitors=monitors))
     for m in monitors:
         m.finalize()

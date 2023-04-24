@@ -1,4 +1,4 @@
-import random
+import logging
 
 import torch, pytorch_lightning as pl
 from torch.utils.data import DataLoader
@@ -7,23 +7,28 @@ from gqe.energy_model.callback import RecordEnergy
 from gqe.energy_model.sampler import NaiveSampler
 from gqe.energy_model.network import PauliEnergy
 from gqe.energy_estimator.qdrift import QDriftEstimator
-from gqe.operator_pool.op import AllPauliOperator
+from gqe.hamiltonian.molecule import MolecularHamiltonian
+from gqe.operator_pool.uccsd import UCCSD
 from gqe.util import VoidDataset
-from qwrapper.hamiltonian import HeisenbergModel
 
 device = torch.device("cuda:0") if torch.cuda.is_available() else torch.device("cpu")
 
 if __name__ == '__main__':
-    nqubit = 3
+    ##################################
+    ### Definision of the problem ####
+    ##################################
+    nqubit = 12
     N = 8000
+    lam = 12
+    hidden_dim = 100
+    sampler = NaiveSampler(PauliEnergy(nqubit, hidden_dim=hidden_dim, gpu=torch.cuda.is_available()),
+                           operator_pool=UCCSD(nqubit, True),
+                           N=N, lam=lam, beta=10)
+    hamiltonian = MolecularHamiltonian(nqubit, "sto-3g", pubchem_name="lih", bravyi_kitaev=True)
+    ##################################
 
-    # dummy data loader
-    dataloader = DataLoader(VoidDataset(), batch_size=1, shuffle=False, num_workers=0)
-    # Sampler that samples from generative model
-    sampler = NaiveSampler(PauliEnergy(nqubit, 100, gpu=torch.cuda.is_available()),
-                           operator_pool=AllPauliOperator(nqubit), N=N, lam=12, beta=10)
     # Energy estimator
-    estimator = QDriftEstimator(HeisenbergModel(nqubit), N, tool='qulacs')
+    estimator = QDriftEstimator(hamiltonian, N, tool='qulacs')
     # Energy model
     model = EnergyModel(sampler, estimator=estimator, n_samples=100, lr=1e-4).to(device)
 
@@ -39,5 +44,8 @@ if __name__ == '__main__':
             recorder
         ])
     pl.seed_everything(42)
+    logging.getLogger().setLevel(logging.INFO)
+    # dummy data loader
+    dataloader = DataLoader(VoidDataset(), batch_size=1, shuffle=False, num_workers=0)
     trainer.fit(model, train_dataloaders=dataloader)
     recorder.save('output/deep_energy.tsv')

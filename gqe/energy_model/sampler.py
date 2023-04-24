@@ -1,20 +1,15 @@
-import math
-import random
-import sys
-
-import emcee
-import numpy as np
+import math, random, sys, emcee, numpy as np
 from qwrapper.operator import ControllablePauli, PauliTimeEvolution
 from qwrapper.sampler import FasterImportantSampler
 
 from gqe.energy_estimator.ee import Sampler
+from gqe.operator_pool.op import OperatorPool
 
 
 class NaiveSampler(Sampler):
-    def __init__(self, nn, N, lam, beta, nqubit):
+    def __init__(self, nn, operator_pool: OperatorPool, N, lam, beta):
         self.nn = nn
-        self.nqubit = nqubit
-        self.all_paulis = self._all_paulis()
+        self.all_paulis = operator_pool.all()
         self.N = N
         self.lam = lam
         self.beta = beta
@@ -58,22 +53,6 @@ class NaiveSampler(Sampler):
         for f in self.nn.forward(self.all_paulis):
             results.append(math.exp(-self.beta * f))
         return results
-
-    def _all_paulis(self):
-        results = [""]
-        for _ in range(self.nqubit):
-            next = []
-            for pauli in ["I", "X", "Y", "Z"]:
-                for r in results:
-                    r = r + pauli
-                    next.append(r)
-            results = next
-        paulis = []
-        for r in results:
-            paulis.append(ControllablePauli(r))
-        for r in results:
-            paulis.append(ControllablePauli(r, -1))
-        return paulis
 
 
 class DeepMCMCSampler(Sampler):

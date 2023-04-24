@@ -9,11 +9,17 @@ import random, sys
 
 
 class QDriftEstimator(EnergyEstimator):
-    def __init__(self, hamiltonian: Hamiltonian, N, tool='qulacs', shot=0):
+    def __init__(self, hamiltonian: Hamiltonian, N, measurement=None, ancilla_measurement=None, tool='qulacs', shot=0):
         super().__init__(hamiltonian)
         self.nqubit = hamiltonian.nqubit
-        self.mes_method = MeasurementMethod(hamiltonian)
-        self.ancilla_mes_method = AncillaMeasurementMethod(hamiltonian)
+        if measurement is None:
+            self.mes_method = MeasurementMethod(hamiltonian)
+        else:
+            self.mes_method = measurement
+        if ancilla_measurement is None:
+            self.ancilla_mes_method = AncillaMeasurementMethod(hamiltonian)
+        else:
+            self.ancilla_mes_method = ancilla_measurement
         self.N = N
         self.initializer = XInitializer()
         self._ancilla = self.nqubit

@@ -8,6 +8,7 @@ from gqe.energy_model.sampler import NaiveSampler
 from gqe.energy_model.network import PauliEnergy
 from gqe.energy_estimator.qdrift import QDriftEstimator
 from gqe.hamiltonian.molecule import MolecularHamiltonian
+from gqe.measurement import StochasticMeasurementMethod, AncillaStochasticMeasurementMethod
 from gqe.operator_pool.uccsd import UCCSD
 from gqe.util import VoidDataset
 
@@ -15,20 +16,21 @@ device = torch.device("cuda:0") if torch.cuda.is_available() else torch.device("
 
 if __name__ == '__main__':
     ##################################
-    ### Definision of the problem ####
+    ### Basic settings ###############
     ##################################
     nqubit = 12
-    N = 8000
+    N = 800
     lam = 12
     hidden_dim = 100
     sampler = NaiveSampler(PauliEnergy(nqubit, hidden_dim=hidden_dim, gpu=torch.cuda.is_available()),
-                           operator_pool=UCCSD(nqubit, True),
+                           operator_pool=UCCSD(nqubit),
                            N=N, lam=lam, beta=10)
-    hamiltonian = MolecularHamiltonian(nqubit, "sto-3g", pubchem_name="lih", bravyi_kitaev=True)
+    hamiltonian = MolecularHamiltonian(nqubit, "sto-3g", pubchem_name="lih")
     ##################################
 
     # Energy estimator
-    estimator = QDriftEstimator(hamiltonian, N, tool='qulacs')
+    estimator = QDriftEstimator(hamiltonian, N, measurement=StochasticMeasurementMethod(hamiltonian, 1),
+                                ancilla_measurement=AncillaStochasticMeasurementMethod(hamiltonian, 1), tool='qulacs')
     # Energy model
     model = EnergyModel(sampler, estimator=estimator, n_samples=100, lr=1e-4).to(device)
 

@@ -1,4 +1,14 @@
 venv
 .idea/*
 common/.*
+output/*
 *.pyc
+.*
+lightning_logs/*
+!.dvc
+!.dvcignore
+data/*
+tutorial/*
+saved_models/*
+char_gen.py
+wonderland.txt

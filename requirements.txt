@@ -1,0 +1,12 @@
+emcee==3.1.4
+matplotlib==3.6.3
+numpy==1.22.1
+pandas==1.5.3
+pylatexenc==2.10
+pytorch-lightning==2.0.1
+qiskit==0.41.0
+qiskit-aer==0.11.2
+qiskit-ibmq-provider==0.20.0
+qiskit-terra==0.23.1
+qwrapper @ git+ssh://git@github.com/konakaji/qwrapper.git
+scipy>=1.7.0

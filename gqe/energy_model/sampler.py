@@ -6,6 +6,20 @@ from gqe.energy_estimator.ee import Sampler
 from gqe.operator_pool.op import OperatorPool
 
 
+class MultiIndexSampler:
+    def __init__(self, sampler):
+        self.sampler = sampler
+
+    def sample(self, s, n):
+        if s == 0:
+            return [self.sampler.sample_index() for _ in range(n)]
+        elif s == 1:
+            index = self.sampler.sample_index()
+            return [index for _ in range(n)]
+        else:
+            raise AttributeError("illegal s value.")
+
+
 class NaiveSampler(Sampler):
     def __init__(self, nn, operator_pool: OperatorPool, N, lam, beta):
         self.nn = nn

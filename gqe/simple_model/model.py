@@ -2,12 +2,11 @@ import numpy as np
 
 from qwrapper.obs import PauliObservable
 from qwrapper.optimizer import AdamOptimizer
-from qwrapper.operator import PauliTimeEvolution, ControllablePauli
+from qwrapper.operator import ControllablePauli
 from qwrapper.sampler import FasterImportantSampler
 from qswift.compiler import DefaultOperatorPool
 from gqe.energy_estimator.qswift import SecondQSwiftEstimator
 from gqe.util import identity
-from gqe.energy_estimator.ee import Sampler, EnergyEstimator
 
 
 class Ansatz:
@@ -32,55 +31,6 @@ class Ansatz:
         return Ansatz(self.h_vec, self._o_vec, self.nqubit)
 
 
-class SimpleSampler(Sampler):
-    def __init__(self):
-        self.cache = {}
-        self.hs = None
-        self.operators = None
-        self.evolutions = None
-        self.sampler = None
-
-    def reset(self, ansatz: Ansatz, N, lam):
-        hs = ansatz.get_positive_h_vec()
-        hs.append(lam - sum(hs))
-        self.hs = hs
-        operators = ansatz.get_signed_o_vec()
-        operators.append(identity(ansatz.nqubit))
-        self.operators = operators
-        evolutions = []
-        for o in operators:
-            key = str(o)
-            if key not in self.cache:
-                evolution = PauliTimeEvolution(o, lam / N)
-                self.cache[key] = evolution
-            evolutions.append(self.cache[key])
-        self.evolutions = evolutions
-        self.sampler = FasterImportantSampler(self.hs)
-
-    def sample_indices(self, count=1):
-        res = []
-        for j in range(count):
-            index = self.sampler.sample_index()
-            res.append(index)
-        return res
-
-    def sample_operators(self, count=1) -> [ControllablePauli]:
-        res = []
-        for j in range(count):
-            index = self.sampler.sample_index()
-            res.append(self.operators[index])
-        return res
-
-    def sample_time_evolutions(self, count=1) -> [PauliTimeEvolution]:
-        res = []
-        for index in self.sampler.sample_indices(count):
-            res.append(self.evolutions[index])
-        return res
-
-    def get(self, j):
-        return self.operators[j]
-
-
 class SimpleModel:
     def __init__(self, estimator: SecondQSwiftEstimator,
                  ansatz: Ansatz, N, lam, tool="qulacs"):
@@ -96,8 +46,12 @@ class SimpleModel:
     def cost(self, params):
         ansatz = self.ansatz.copy()
         ansatz.h_vec = params
-        sampler = FasterImportantSampler(ansatz.get_positive_h_vec())
-        pool = DefaultOperatorPool(ansatz.get_signed_o_vec())
+        hs = ansatz.get_positive_h_vec()
+        hs.append(self.lam - sum(hs))
+        sampler = FasterImportantSampler(hs)
+        operators = ansatz.get_signed_o_vec()
+        operators.append(identity(self.ansatz.nqubit))
+        pool = DefaultOperatorPool(operators)
         return self.estimator.value(sampler, pool, self.lam)
 
     def gradient(self, params):
@@ -105,9 +59,13 @@ class SimpleModel:
         summation = sum(self.ansatz.get_positive_h_vec())
         if summation > self.lam:
             raise AttributeError(f'sum of h became larger than h_vec: {summation}')
-        sampler = FasterImportantSampler(self.ansatz.get_positive_h_vec())
-        pool = DefaultOperatorPool(self.ansatz.get_signed_o_vec())
-        res = np.array([self.estimator.first_order_grad(sampler, pool, self.lam, j) for j in
+        hs = self.ansatz.get_positive_h_vec()
+        hs.append(self.lam - summation)
+        sampler = FasterImportantSampler(hs)
+        operators = self.ansatz.get_signed_o_vec()
+        operators.append(identity(self.ansatz.nqubit))
+        pool = DefaultOperatorPool(operators)
+        res = np.array([self.estimator.grad(sampler, pool, self.lam, j) for j in
                         range(len(params))])
         results = []
         for h, r in zip(self.ansatz.h_vec, res):

@@ -9,7 +9,7 @@ from gqe.energy_estimator.qswift import SecondQSwiftEstimator
 
 if __name__ == '__main__':
     logging.getLogger("gqe.energy_estimator.qswift.SecondQSwiftEstimator").setLevel(logging.INFO)
-    N = 200
+    N = 2000
     n_sample = 1000
     lam = 15
     nqubit = 3

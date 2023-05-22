@@ -33,8 +33,8 @@ class SecondQSwiftEstimator:
         compiler = self._build_compiler(operator_pool, lam)
         channels = []
         channels.extend(self.first_order_grad(sampler, j))
-        channels.extend(self.second_order_grad(sampler, lam, j))
-        self.executor.execute(compiler, channels)
+        # channels.extend(self.second_order_grad(sampler, lam, j))
+        return self.executor.execute(compiler, channels)
 
     def first_order_grad(self, sampler: ImportantSampler, j):
         channels = []
@@ -70,6 +70,7 @@ class SecondQSwiftEstimator:
                 swift_channel.add_time_operators(j_vec)
 
             for s in [0, 1]:
+                pass
 
         return channels
 

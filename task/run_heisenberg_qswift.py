@@ -8,7 +8,7 @@ from gqe.simple_model.model import SimpleModel, Ansatz
 from gqe.energy_estimator.qswift import SecondQSwiftEstimator
 
 if __name__ == '__main__':
-    logging.getLogger("gqe.energy_estimator.qswift.SecondQSwiftEstimator").setLevel(logging.INFO)
+    # logging.getLogger("gqe.energy_estimator.qswift.SecondQSwiftEstimator").setLevel(logging.DEBUG)
     N = 2000
     n_sample = 1000
     lam = 15
@@ -24,11 +24,16 @@ if __name__ == '__main__':
                         PauliObservable("IXX"), PauliObservable("IYY"), PauliObservable("IZZ"),
                         PauliObservable("XIX"), PauliObservable("YIY"), PauliObservable("ZIZ"),
                     ], nqubit=nqubit)
+    with open('../saved_models/model.json') as f:
+        ansatz = Ansatz.fromJSON(f.read())
+
     estimator = SecondQSwiftEstimator(hamiltonian,
                                       XBasisInitializer(),
-                                      N, tool='qulacs', n_sample=n_sample, n_grad_sample=10)
+                                      N, tool='qulacs', n_sample=n_sample, n_grad_sample=9)
     model = SimpleModel(estimator, ansatz, N, lam, n_sample)
     monitors = [PrintMonitor(), FileMonitor('../output/energy.txt')]
-    model.run(AdamOptimizer(maxiter=200, scheduler=UnitLRScheduler(0.01), monitors=monitors))
+    model.run(AdamOptimizer(maxiter=100, scheduler=UnitLRScheduler(0.01), monitors=monitors))
     for m in monitors:
         m.finalize()
+    # with open('../saved_models/model.json', 'w') as f:
+    #     f.write(model.ansatz.toJSON())

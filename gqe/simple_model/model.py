@@ -1,6 +1,6 @@
-import numpy as np
+import json, numpy as np
 
-from qwrapper.obs import PauliObservable
+from qwrapper.obs import PauliObservable, Hamiltonian
 from qwrapper.optimizer import AdamOptimizer
 from qwrapper.operator import ControllablePauli
 from qwrapper.sampler import FasterImportantSampler
@@ -30,15 +30,39 @@ class Ansatz:
     def copy(self):
         return Ansatz(self.h_vec, self._o_vec, self.nqubit)
 
+    def toJSON(self):
+        map = {
+            'h_vec': [str(h) for h in self.h_vec],
+            'o_vec': [str(o) for o in self._o_vec],
+            'nqubit': self.nqubit
+        }
+        return json.dumps(map, indent=2)
+
+    @classmethod
+    def fromJSON(cls, string):
+        map = json.loads(string)
+        h_vec = [float(h) for h in map['h_vec']]
+        o_vec = []
+        for s in map['o_vec']:
+            sign_str = s[0]
+            if sign_str == "+":
+                sign = 1
+            else:
+                sign = -1
+            o_vec.append(PauliObservable(s[1:], sign))
+        nqubit = map['nqubit']
+        return Ansatz(h_vec, o_vec, nqubit)
+
 
 class SimpleModel:
     def __init__(self, estimator: SecondQSwiftEstimator,
-                 ansatz: Ansatz, N, lam, tool="qulacs"):
+                 ansatz: Ansatz, N, lam, tool="qulacs", exact_cost=True):
         self.estimator = estimator
         self.ansatz = ansatz
         self.N = N
         self.lam = lam
         self.tool = tool
+        self.exact_cost = exact_cost
 
     def run(self, optimizer: AdamOptimizer):
         optimizer.do_optimize(self.gradient, self.ansatz.h_vec, self.cost)
@@ -46,6 +70,9 @@ class SimpleModel:
     def cost(self, params):
         ansatz = self.ansatz.copy()
         ansatz.h_vec = params
+        if self.exact_cost:
+            time_evolution = Hamiltonian(ansatz.get_positive_h_vec(), ansatz.get_signed_o_vec(), self.ansatz.nqubit)
+            return self.estimator.exact(time_evolution)
         hs = ansatz.get_positive_h_vec()
         hs.append(self.lam - sum(hs))
         sampler = FasterImportantSampler(hs)
@@ -65,12 +92,9 @@ class SimpleModel:
         operators = self.ansatz.get_signed_o_vec()
         operators.append(identity(self.ansatz.nqubit))
         pool = DefaultOperatorPool(operators)
-        res = np.array([self.estimator.grad(sampler, pool, self.lam, j) for j in
-                        range(len(params))])
-        results = []
-        for h, r in zip(self.ansatz.h_vec, res):
-            if h < 0:
-                results.append(-r)
-            else:
-                results.append(r)
-        return np.array(results)
+
+        grads = []
+        for j in range(len(params)):
+            sign = 1 if self.ansatz.h_vec[j] > 0 else -1
+            grads.append(sign * self.estimator.grad(sampler, pool, self.lam, j))
+        return np.array(grads)

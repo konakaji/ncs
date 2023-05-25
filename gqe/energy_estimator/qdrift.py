@@ -39,6 +39,7 @@ class QDriftEstimator(EnergyEstimator):
     def grad(self, sampler: Sampler, index):
         seed = random.randint(0, sys.maxsize)
         get_operator_func = self._get_operator(sampler, index)
+        print("--------")
         t_1 = self.ancilla_mes_method.get_value(self._get_prepare(sampler, get_operator_func, False),
                                                 ntotal=self.shot,
                                                 seed=seed)

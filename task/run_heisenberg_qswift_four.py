@@ -14,25 +14,26 @@ if __name__ == '__main__':
     # logging.getLogger("gqe.energy_estimator.qswift.SecondQSwiftEstimator").setLevel(logging.DEBUG)
     N = 200
     n_sample = 1000
-    lam = 15
-    nqubit = 3
+    lam = 25
+    nqubit = 4
     hamiltonian = HeisenbergModel(nqubit)
     print(compute_ground_state(hamiltonian))
-    ansatz = Ansatz([random.gauss(0, 0.5) for _ in range(18)],
+    ansatz = Ansatz([random.gauss(0, 1) for _ in range(21)],
                     [
-                        PauliObservable("XII"), PauliObservable("YII"), PauliObservable("ZII"),
-                        PauliObservable("IXI"), PauliObservable("IYI"), PauliObservable("IZI"),
-                        PauliObservable("IIX"), PauliObservable("IIY"), PauliObservable("IIZ"),
-                        PauliObservable("XXI"), PauliObservable("YYI"), PauliObservable("ZZI"),
-                        PauliObservable("IXX"), PauliObservable("IYY"), PauliObservable("IZZ"),
-                        PauliObservable("XIX"), PauliObservable("YIY"), PauliObservable("ZIZ"),
+                        PauliObservable("XIII"), PauliObservable("YIII"), PauliObservable("ZIII"),
+                        PauliObservable("IIXI"), PauliObservable("IIYI"), PauliObservable("IIZI"),
+                        PauliObservable("IIXI"), PauliObservable("IIYI"), PauliObservable("IIZI"),
+                        PauliObservable("XXII"), PauliObservable("YYII"), PauliObservable("ZZII"),
+                        PauliObservable("IXXI"), PauliObservable("IYYI"), PauliObservable("IZZI"),
+                        PauliObservable("IIXX"), PauliObservable("IIYY"), PauliObservable("IIZZ"),
+                        PauliObservable("XIIX"), PauliObservable("YIIY"), PauliObservable("ZIIZ")
                     ], nqubit=nqubit)
     estimator = SecondQSwiftEstimator(hamiltonian,
                                       XBasisInitializer(),
                                       N, K=0, tool='qulacs', n_sample=n_sample, n_grad_sample=1)
     model = SimpleModel(estimator, ansatz, N, lam, n_sample)
     monitors = [PrintMonitor(), FileMonitor('../output/energy.txt')]
-    model.run(AdamOptimizer(maxiter=500, scheduler=UnitLRScheduler(0.01), monitors=monitors))
+    model.run(AdamOptimizer(maxiter=1000, scheduler=UnitLRScheduler(0.01), monitors=monitors))
     for m in monitors:
         m.finalize()
     with open(OUTPUT_FILENAME, 'w') as f:

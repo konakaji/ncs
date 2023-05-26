@@ -1,6 +1,6 @@
 import math, random, sys, emcee, numpy as np
 from qwrapper.operator import ControllablePauli, PauliTimeEvolution
-from qwrapper.sampler import FasterImportantSampler
+from qwrapper.sampler import FasterImportantSampler, ImportantSampler
 
 from gqe.energy_estimator.ee import Sampler
 from gqe.operator_pool.op import OperatorPool
@@ -20,7 +20,7 @@ class MultiIndexSampler:
             raise AttributeError("illegal s value.")
 
 
-class NaiveSampler(Sampler):
+class NaiveSampler(ImportantSampler):
     def __init__(self, nn, operator_pool: OperatorPool, N, lam, beta):
         self.nn = nn
         self.all_paulis = operator_pool.all()
@@ -29,6 +29,9 @@ class NaiveSampler(Sampler):
         self.beta = beta
         self.sampler = self.reset()
         self.evolution_map = {}
+
+    def sample_index(self):
+        return self.sample_indices(1)[0]
 
     def sample_indices(self, count=1):
         return self.sampler.sample_indices(count)

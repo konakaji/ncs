@@ -51,15 +51,12 @@ class SecondQSwiftEstimator:
         return result
 
     def grad(self, sampler: ImportantSampler, operator_pool: OperatorPool, lam, j):
-        channels = []
-        start = time.time()
-        channels.extend(self.g(sampler, j))
-        channels.extend(self.d1(sampler, lam, j))
-        channels.extend(self.d2(sampler, j))
         compiler = self._build_compiler(operator_pool, lam)
-        res = self.executor.execute(compiler, channels)
-        self.logger.debug(f"grad: {time.time() - start}")
-        return res
+        g = self.executor.execute(compiler, self.g(sampler, j))
+        d1 = lam ** 2 / (2 * self.N) * self.executor.execute(compiler, self.d1(sampler, lam, j))
+        d2 = lam ** 2 / (2 * self.N) * self.executor.execute(compiler, self.d2(sampler, j))
+        self.logger.debug(f"(g, d1, d2) = ({g}, {d1}, {d2})")
+        return g + d1 + d2
 
     def g(self, sampler: ImportantSampler, j):
         channels = []

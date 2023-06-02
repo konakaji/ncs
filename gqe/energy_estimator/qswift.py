@@ -1,6 +1,5 @@
 from qwrapper.obs import Hamiltonian
 from qwrapper.sampler import ImportantSampler
-from qwrapper.circuit import init_circuit
 from qwrapper.hamiltonian import to_matrix_hamiltonian
 from qswift.util import make_positive
 from qswift.measurement import NaiveGenerator

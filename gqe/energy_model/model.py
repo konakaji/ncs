@@ -36,7 +36,7 @@ class RecordEnergy(Callback):
     def on_train_epoch_end(self, trainer: "pl.Trainer", pl_module: "pl.LightningModule") -> None:
         values = []
         for j in range(self.n_samples):
-            values.append(self.estimator.value(self.sampler))
+            values.append(self.estimator.fo_value(self.sampler))
         mean = np.mean(values)
         self.records.append(mean)
         print(mean)

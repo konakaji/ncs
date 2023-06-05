@@ -29,10 +29,10 @@ if __name__ == '__main__':
                     ], nqubit=nqubit)
     estimator = SecondQSwiftEstimator(hamiltonian,
                                       XBasisInitializer(),
-                                      N, K=0, tool='qulacs', n_sample=n_sample, n_grad_sample=1)
+                                      N, K=1, tool='qulacs', n_sample=n_sample, n_grad_sample=1)
     model = SimpleModel(estimator, ansatz, N, lam, n_sample)
     monitors = [PrintMonitor(), FileMonitor('../output/energy.txt')]
-    model.run(AdamOptimizer(maxiter=500, scheduler=UnitLRScheduler(0.01), monitors=monitors))
+    model.run(AdamOptimizer(maxiter=200, scheduler=UnitLRScheduler(0.01), monitors=monitors))
     for m in monitors:
         m.finalize()
     with open(OUTPUT_FILENAME, 'w') as f:

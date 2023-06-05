@@ -1,7 +1,12 @@
 import math
 
-from qwrapper.obs import Pauli
+from qwrapper.obs import Pauli, Hamiltonian
 from scipy.linalg import expm
+from gqe.energy_estimator.qswift import *
+from gqe.simple_model.model import *
+from qswift.compiler import *
+from qswift.initializer import XBasisInitializer
+from qwrapper.sampler import FasterImportantSampler
 import numpy as np
 from unittest import TestCase
 
@@ -24,7 +29,7 @@ def apply(rho, probs, operators, lam, N):
         if current is None:
             current = value
         else:
-            current += value
+            current = current + value
     return current
 
 
@@ -205,6 +210,26 @@ def exact_value(obs, operators, params, rho):
         else:
             result = result + param * operator
     return np.trace(obs.dot(expm(1j * result).dot(rho).dot(expm(-1j * result)))).real
+
+
+class TestGradientEstimator(TestCase):
+    def test_estimator(self):
+        obs = Pauli.X
+        observable = PauliObservable("X")
+        N = 10
+        lam = 3
+        params = [0.1, 0.3]
+        operators = [Pauli.Z, Pauli.Y, Pauli.I]
+        opes = [PauliObservable("Z"), PauliObservable("Y")]
+        estimator = SecondQSwiftEstimator(Hamiltonian([1], [observable], 1), XBasisInitializer(), N=N, K=1,
+                                          n_sample=1000, n_grad_sample=1000, tool="qulacs")
+        ansatz = Ansatz(params, opes, 1)
+        model = SimpleModel(estimator, ansatz, N, lam, exact_cost=False)
+        rho = np.array([[1 / 2, 1 / 2], [1 / 2, 1 / 2]], dtype=np.complex128)
+        grads = model.gradient(params)
+        print("cost", model.cost(params), so_value(obs, operators, params, lam, rho, N))
+        for j in range(len(params)):
+            print("grad", grads[j], so_analytic_grad(obs, operators, params, rho, lam, N, j))
 
 
 class TestGradientTheory(TestCase):

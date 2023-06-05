@@ -7,7 +7,7 @@ from qswift.compiler import Compiler, SwiftChannel, OperatorPool, MultiIndexSamp
 from qswift.executor import QSwiftExecutor
 from qswift.qswift import QSwift
 from qswift.exact import ExactComputation
-import random, sys, logging, time
+import random, sys, logging, time, math
 
 
 class SecondQSwiftEstimator:
@@ -33,6 +33,9 @@ class SecondQSwiftEstimator:
         self.n_grad_sample = n_grad_sample
 
     def exact(self, time_evolution):
+        """
+        :return: Tr(H e^{i\sum_{j=1}h_j O_j} rho e^{-i\sum_{j=1}h_j O_j})}
+        """
         computation = ExactComputation(to_matrix_hamiltonian(self.hamiltonian),
                                        to_matrix_hamiltonian(time_evolution), 1, self.initializer)
         return computation.compute()
@@ -42,32 +45,34 @@ class SecondQSwiftEstimator:
         :param sampler:
         :param operator_pool:
         :param lam:
-        :return : The value of the current energy
+        :return : The value of the current energy estimated by qSWIFT
         """
         start = time.time()
-        result = self.qswift.evaluate(sampler=sampler, operator_pool=operator_pool, lam=lam).sum(0)
+        result = self.qswift.evaluate(sampler=sampler, operator_pool=operator_pool, lam=lam).sum(self.K)
         self.logger.debug(f"value: {time.time() - start}")
         return result
 
     def grad(self, sampler: ImportantSampler, operator_pool: OperatorPool, lam, j):
         compiler = self._build_compiler(operator_pool, lam)
-        g = self.executor.execute(compiler, self.g(sampler, j))
+        g = self.executor.execute(compiler, self.g(sampler, lam, j))
         d1 = lam ** 2 / (2 * self.N) * self.executor.execute(compiler, self.d1(sampler, lam, j))
-        d2 = lam ** 2 / (2 * self.N) * self.executor.execute(compiler, self.d2(sampler, j))
+        d2 = lam ** 2 / (2 * self.N) * self.executor.execute(compiler, self.d2(sampler, lam, j))
         self.logger.debug(f"(g, d1, d2) = ({g}, {d1}, {d2})")
         return g + d1 + d2
 
-    def g(self, sampler: ImportantSampler, j):
+    def g(self, sampler: ImportantSampler, lam, j):
         channels = []
         for measurement in self.measurement_gen.generate(self.n_grad_sample):
             seed = random.randint(0, sys.maxsize)
-            j_vec = sampler.sample_indices(self.N - 1)
-            swift_channel = SwiftChannel(1)
-            swift_channel.add_time_operators(j_vec)
-            swift_channel.add_l_operator(j)
-            swift_channel.shuffle(seed)
-            measurement.assign(swift_channel)
-            channels.append(swift_channel)
+            for n in range(1, 5):
+                coeff = 1 / math.factorial(n) * (lam / self.N) ** (n - 1)
+                j_vec = sampler.sample_indices(self.N - 1)
+                swift_channel = SwiftChannel(coeff)
+                swift_channel.add_time_operators(j_vec)
+                swift_channel.add_multi_l_operators([j for _ in range(n)])
+                swift_channel.shuffle(seed)
+                measurement.assign(swift_channel)
+                channels.append(swift_channel)
         return channels
 
     def d1(self, sampler: ImportantSampler, lam, j):
@@ -100,24 +105,26 @@ class SecondQSwiftEstimator:
             channels.append(swift_channel)
         return channels
 
-    def d2(self, sampler: ImportantSampler, j):
+    def d2(self, sampler: ImportantSampler, lam, j):
         if self.K == 0:
             return []
         multi_sampler = MultiIndexSampler(sampler)
         channels = []
         for measurement in self.measurement_gen.generate(self.n_grad_sample):
-            seed = random.randint(0, sys.maxsize)
-            j_vec = sampler.sample_indices(self.N - 2)
-            for s in [0, 1]:
-                sign = (-1) ** s
-                l1, l2 = multi_sampler.sample(s, 2)
-                swift_channel = SwiftChannel(sign)
-                swift_channel.add_time_operators(j_vec)
-                swift_channel.add_multi_l_operators([l1, l2])
-                swift_channel.add_l_operator(j)
-                swift_channel.shuffle(seed)
-                measurement.assign(swift_channel)
-                channels.append(swift_channel)
+            for n in range(1, 3):
+                seed = random.randint(0, sys.maxsize)
+                j_vec = sampler.sample_indices(self.N - 2)
+                coeff = 1 / math.factorial(n) * (lam / self.N) ** (n - 1)
+                for s in [0, 1]:
+                    sign = (-1) ** s
+                    l1, l2 = multi_sampler.sample(s, 2)
+                    swift_channel = SwiftChannel(sign * coeff)
+                    swift_channel.add_time_operators(j_vec)
+                    swift_channel.add_multi_l_operators([l1, l2])
+                    swift_channel.add_multi_l_operators([j for _ in range(n)])
+                    swift_channel.shuffle(seed)
+                    measurement.assign(swift_channel)
+                    channels.append(swift_channel)
         return channels
 
     def _build_compiler(self, operator_pool: OperatorPool, lam):

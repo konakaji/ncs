@@ -4,7 +4,6 @@ from qwrapper.obs import PauliObservable
 from qwrapper.optimizer import AdamOptimizer
 from qwrapper.operator import PauliTimeEvolution, ControllablePauli
 from qwrapper.sampler import FasterImportantSampler
-from qswift.compiler import OperatorPool, DefaultOperatorPool
 from gqe.util import identity
 from gqe.energy_estimator.ee import Sampler, EnergyEstimator
 

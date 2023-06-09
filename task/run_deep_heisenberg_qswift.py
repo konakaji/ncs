@@ -2,9 +2,9 @@ import random
 
 import torch, pytorch_lightning as pl
 from torch.utils.data import DataLoader
-from gqe.energy_model.model import EnergyModel, all
+from gqe.energy_model.model2 import EnergyModel, all
 from gqe.energy_model.callback import RecordEnergy
-from gqe.energy_model.model import NaiveSampler
+from gqe.energy_model.model2 import NaiveSampler
 from gqe.energy_model.network import PauliEnergy
 from gqe.energy_estimator.qswift import SecondQSwiftEstimator
 from gqe.energy_estimator.initializer import XInitializer

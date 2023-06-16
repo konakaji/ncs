@@ -12,6 +12,16 @@ import random, sys, logging, time, math
 
 class IIDEstimator:
     def __init__(self, obs: Hamiltonian, initializer, N, K, n_sample, n_grad_sample, tool='qulacs', shot=0):
+        """
+        :param obs: Hamiltonian, where we want to get the ground state
+        :param initializer: The initializer of the quantum circuit
+        :param N: # of quantum gates in each circuit
+        :param K: The order of the energy estimation
+        :param n_sample: # of samples to estimate the energy
+        :param n_grad_sample: # of samples to estimate the gradient
+        :param tool: qiskit or qulacs
+        :param shot: # of shots for each sample
+        """
         self.logger = logging.getLogger("gqe.energy_estimator.qswift.IIDEstimator")
         if K > 1:
             raise AttributeError("K > 1 is not implemented")
@@ -33,6 +43,8 @@ class IIDEstimator:
         self.shot = shot
         self.n_sample = n_sample
         self.n_grad_sample = n_grad_sample
+        # Order of the gradient calculation
+        self.grad_order = 3
 
     def exact(self, evolution_hamiltonian: Hamiltonian):
         """
@@ -66,7 +78,7 @@ class IIDEstimator:
         channels = []
         for measurement in self.measurement_gen.generate(self.n_grad_sample):
             seed = random.randint(0, sys.maxsize)
-            for n in range(1, 5):
+            for n in range(1, self.grad_order):
                 coeff = 1 / math.factorial(n) * (lam / self.N) ** (n - 1)
                 j_vec = sampler.sample_indices(self.N - 1)
                 swift_channel = SwiftChannel(coeff)
@@ -113,7 +125,7 @@ class IIDEstimator:
         multi_sampler = MultiIndexSampler(sampler)
         channels = []
         for measurement in self.measurement_gen.generate(self.n_grad_sample):
-            for n in range(1, 3):
+            for n in range(1, self.grad_order):
                 seed = random.randint(0, sys.maxsize)
                 j_vec = sampler.sample_indices(self.N - 2)
                 coeff = 1 / math.factorial(n) * (lam / self.N) ** (n - 1)

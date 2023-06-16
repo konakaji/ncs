@@ -4,25 +4,11 @@ from qwrapper.operator import ControllablePauli, PauliTimeEvolution
 from qwrapper.sampler import FasterImportantSampler, ImportantSampler
 
 from gqe.energy_estimator.ee import Sampler
-from gqe.operator_pool.op import OperatorPool
-
-
-class MultiIndexSampler:
-    def __init__(self, sampler):
-        self.sampler = sampler
-
-    def sample(self, s, n):
-        if s == 0:
-            return [self.sampler.sample_index() for _ in range(n)]
-        elif s == 1:
-            index = self.sampler.sample_index()
-            return [index for _ in range(n)]
-        else:
-            raise AttributeError("illegal s value.")
+from gqe.operator_pool.op import ListablePool
 
 
 class NaiveSampler(ImportantSampler):
-    def __init__(self, nn, operator_pool: OperatorPool, N, lam, beta):
+    def __init__(self, nn, operator_pool: ListablePool, N, lam, beta):
         self.nn = nn
         self.all_paulis = operator_pool.all()
         self.N = N

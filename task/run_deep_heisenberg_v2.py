@@ -2,8 +2,8 @@ import random
 
 import torch, pytorch_lightning as pl
 from torch.utils.data import DataLoader
-from gqe.energy_estimator.ee2 import V2EnergyEstimator
-from gqe.energy_model.model2 import IIDEnergyModel, all
+from gqe.energy_estimator.general import GeneralEstimator
+from gqe.energy_model.general import IIDEnergyModel, all
 from gqe.energy_model.callback import V2ExactRecordEnergy
 from gqe.energy_model.sampler import V2NaiveSampler
 from gqe.energy_model.network import PauliEnergy
@@ -25,7 +25,7 @@ if __name__ == '__main__':
     sampler = V2NaiveSampler(PauliEnergy(nqubit, 100, gpu=torch.cuda.is_available()),
                              operator_pool=pool, beta=10)
     # Energy estimator
-    estimator = V2EnergyEstimator(pool, HeisenbergModel(nqubit), XBasisInitializer(), tau=lam / N)
+    estimator = GeneralEstimator(pool, HeisenbergModel(nqubit), XBasisInitializer(), tau=lam / N)
     # Energy model
     model = IIDEnergyModel(sampler, pool=pool, estimator=estimator, N=N, lr=1e-4).to(device)
     trainer = pl.Trainer(

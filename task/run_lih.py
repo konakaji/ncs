@@ -2,7 +2,7 @@ import logging
 
 import torch, pytorch_lightning as pl
 from torch.utils.data import DataLoader
-from gqe.energy_model.model import EnergyModel
+from gqe.energy_model.iid import IIDEnergyModel
 from gqe.energy_model.callback import RecordEnergy
 from gqe.energy_model.sampler import NaiveSampler
 from gqe.energy_model.network import PauliEnergy
@@ -32,7 +32,7 @@ if __name__ == '__main__':
     estimator = QDriftEstimator(hamiltonian, N, measurement=StochasticMeasurementMethod(hamiltonian, 1),
                                 ancilla_measurement=AncillaStochasticMeasurementMethod(hamiltonian, 1), tool='qulacs')
     # Energy model
-    model = EnergyModel(sampler, estimator=estimator, n_samples=100, lr=1e-4).to(device)
+    model = IIDEnergyModel(sampler, estimator=estimator, n_samples=100, lr=1e-4).to(device)
 
     recorder = RecordEnergy(sampler, estimator, 100)
     trainer = pl.Trainer(

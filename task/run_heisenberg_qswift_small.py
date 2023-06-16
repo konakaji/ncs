@@ -5,7 +5,7 @@ from qwrapper.obs import PauliObservable
 from qwrapper.hamiltonian import HeisenbergModel, compute_ground_state
 from qwrapper.optimizer import AdamOptimizer, UnitLRScheduler, PrintMonitor, FileMonitor
 from qswift.initializer import XBasisInitializer
-from gqe.simple_model.model2 import SimpleModel, Ansatz
+from gqe.simple_model.model import SimpleModel, Ansatz
 from gqe.energy_estimator.qswift import IIDEstimator
 
 INPUT_FILENAME = '../saved_models/model_two___.json'

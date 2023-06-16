@@ -2,12 +2,15 @@ import numpy as np
 import pytorch_lightning as pl
 from pytorch_lightning import Callback
 from qwrapper.hamiltonian import Hamiltonian
+from qswift.compiler import OperatorPool
 from gqe.energy_model.sampler import NaiveSampler, V2NaiveSampler
-from gqe.energy_estimator.ee2 import V2EnergyEstimator
+from gqe.energy_estimator.iid import IIDEstimator
+from gqe.energy_estimator.qdrift import QDriftEstimator
+from gqe.energy_estimator.general import GeneralEstimator
 
 
 class RecordEnergy(Callback):
-    def __init__(self, sampler: NaiveSampler, estimator: V2EnergyEstimator, n_samples):
+    def __init__(self, sampler: NaiveSampler, estimator: QDriftEstimator, n_samples):
         self.sampler = sampler
         self.estimator = estimator
         self.n_samples = n_samples
@@ -28,8 +31,29 @@ class RecordEnergy(Callback):
                 f.write(f'{j}\t{record}\n')
 
 
+class IIDRecordEnergy(Callback):
+    def __init__(self, sampler: NaiveSampler, estimator: IIDEstimator, pool: OperatorPool,
+                 lam):
+        self.sampler = sampler
+        self.estimator = estimator
+        self.pool = pool
+        self.lam = lam
+        self.records = []
+
+    def on_train_epoch_end(self, trainer: "pl.Trainer", pl_module: "pl.LightningModule") -> None:
+        energy = self.estimator.value(self.sampler, self.pool, self.lam)
+        self.records.append(energy)
+        print(energy)
+        super().on_train_epoch_end(trainer, pl_module)
+
+    def save(self, path):
+        with open(path, 'w') as f:
+            for j, record in enumerate(self.records):
+                f.write(f'{j}\t{record}\n')
+
+
 class V2ExactRecordEnergy(Callback):
-    def __init__(self, sampler: V2NaiveSampler, estimator: V2EnergyEstimator, lam, N, n_samples=0):
+    def __init__(self, sampler: V2NaiveSampler, estimator: GeneralEstimator, lam, N, n_samples=0):
         self.sampler = sampler
         self.estimator = estimator
         self.lam = lam

@@ -5,7 +5,7 @@ import torch.optim as optim
 import pytorch_lightning as pl
 from qwrapper.obs import PauliObservable
 from qswift.qswift import OperatorPool
-from gqe.energy_estimator.ee2 import V2EnergyEstimator
+from gqe.energy_estimator.general import GeneralEstimator
 from gqe.energy_model.sampler import V2NaiveSampler
 from pytorch_lightning import Callback
 import numpy as np
@@ -51,7 +51,7 @@ class RecordEnergy(Callback):
 class IIDEnergyModel(pl.LightningModule):
     def __init__(self, sampler: V2NaiveSampler,
                  pool: OperatorPool,
-                 estimator: V2EnergyEstimator, N, n_sample=10,
+                 estimator: GeneralEstimator, N, n_sample=10,
                  lr=1e-4,
                  beta1=0.0):
         super().__init__()

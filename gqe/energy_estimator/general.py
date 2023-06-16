@@ -5,7 +5,7 @@ from qswift.exact import ExactComputation
 from qwrapper.hamiltonian import to_matrix_hamiltonian
 
 
-class V2EnergyEstimator:
+class GeneralEstimator:
     def __init__(self, pool: OperatorPool, hamiltonian: Hamiltonian, initializer, tau, nshot=0):
         self._pool = pool
         self.hamiltonian = hamiltonian

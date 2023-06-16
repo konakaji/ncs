@@ -4,14 +4,14 @@ from qwrapper.obs import PauliObservable
 from qwrapper.hamiltonian import HeisenbergModel, compute_ground_state
 from qwrapper.optimizer import AdamOptimizer, UnitLRScheduler, PrintMonitor, FileMonitor
 from qswift.initializer import XBasisInitializer
-from gqe.simple_model.model2 import SimpleModel, Ansatz
+from gqe.simple_model.model import SimpleModel, Ansatz
 from gqe.energy_estimator.iid import IIDEstimator
 
 INPUT_FILENAME = '../saved_models/model_three.json'
 OUTPUT_FILENAME = '../saved_models/model_three.json'
 
 if __name__ == '__main__':
-    N = 200
+    N = 8000
     n_sample = 1000
     lam = 15
     nqubit = 3

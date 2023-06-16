@@ -221,8 +221,8 @@ class TestGradientEstimator(TestCase):
         params = [0.1, 0.3]
         operators = [Pauli.Z, Pauli.Y, Pauli.I]
         opes = [PauliObservable("Z"), PauliObservable("Y")]
-        estimator = SecondQSwiftEstimator(Hamiltonian([1], [observable], 1), XBasisInitializer(), N=N, K=1,
-                                          n_sample=1000, n_grad_sample=1000, tool="qulacs")
+        estimator = IIDEstimator(Hamiltonian([1], [observable], 1), XBasisInitializer(), N=N, K=1,
+                                 n_sample=1000, n_grad_sample=1000, tool="qulacs")
         ansatz = Ansatz(params, opes, 1)
         model = SimpleModel(estimator, ansatz, N, lam, exact_cost=False)
         rho = np.array([[1 / 2, 1 / 2], [1 / 2, 1 / 2]], dtype=np.complex128)

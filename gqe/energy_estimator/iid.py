@@ -10,9 +10,11 @@ from qswift.exact import ExactComputation
 import random, sys, logging, time, math
 
 
-class SecondQSwiftEstimator:
+class IIDEstimator:
     def __init__(self, obs: Hamiltonian, initializer, N, K, n_sample, n_grad_sample, tool='qulacs', shot=0):
-        self.logger = logging.getLogger("gqe.energy_estimator.qswift.SecondQSwiftEstimator")
+        self.logger = logging.getLogger("gqe.energy_estimator.qswift.IIDEstimator")
+        if K > 1:
+            raise AttributeError("K > 1 is not implemented")
         obs = make_positive(obs)
         self.hamiltonian = obs
         self.qswift = QSwift(obs, initializer, t=1, N=N, K=K, n_p=n_sample)
@@ -32,12 +34,12 @@ class SecondQSwiftEstimator:
         self.n_sample = n_sample
         self.n_grad_sample = n_grad_sample
 
-    def exact(self, time_evolution):
+    def exact(self, evolution_hamiltonian: Hamiltonian):
         """
         :return: Tr(H e^{i\sum_{j=1}h_j O_j} rho e^{-i\sum_{j=1}h_j O_j})}
         """
         computation = ExactComputation(to_matrix_hamiltonian(self.hamiltonian),
-                                       to_matrix_hamiltonian(time_evolution), 1, self.initializer)
+                                       to_matrix_hamiltonian(evolution_hamiltonian), 1, self.initializer)
         return computation.compute()
 
     def value(self, sampler: ImportantSampler, operator_pool: OperatorPool, lam):

@@ -5,7 +5,7 @@ from qwrapper.optimizer import AdamOptimizer
 from qwrapper.operator import PauliTimeEvolution, ControllablePauli
 from qwrapper.sampler import FasterImportantSampler
 from gqe.util import identity
-from gqe.energy_estimator.ee import Sampler, EnergyEstimator
+from gqe.energy_estimator.ee import Sampler, GEnergyEstimator
 
 
 class Ansatz:
@@ -80,7 +80,7 @@ class SimpleSampler(Sampler):
 
 
 class SimpleModel:
-    def __init__(self, estimator: EnergyEstimator, ansatz: Ansatz,
+    def __init__(self, estimator: GEnergyEstimator, ansatz: Ansatz,
                  N, lam, n_sample, tool="qulacs"):
         self.estimator = estimator
         self.ansatz = ansatz

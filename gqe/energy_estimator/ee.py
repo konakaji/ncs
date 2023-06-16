@@ -24,8 +24,14 @@ class Sampler(abc.ABC):
 
 
 class EnergyEstimator(abc.ABC):
-    def __init__(self, hamiltonian: Hamiltonian):
-        self.hamiltonian = hamiltonian
+    @abstractmethod
+    def value(self, indices):
+        pass
+
+
+class GEnergyEstimator(abc.ABC):
+    def __init__(self, obs: Hamiltonian):
+        self.hamiltonian = obs
 
     @abstractmethod
     def value(self, sampler: Sampler):

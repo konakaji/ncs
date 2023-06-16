@@ -5,7 +5,7 @@ from qwrapper.optimizer import AdamOptimizer
 from qwrapper.operator import ControllablePauli
 from qwrapper.sampler import FasterImportantSampler
 from qswift.compiler import DefaultOperatorPool
-from gqe.energy_estimator.qswift import SecondQSwiftEstimator
+from gqe.energy_estimator.iid import IIDEstimator
 from gqe.util import identity
 
 
@@ -55,7 +55,7 @@ class Ansatz:
 
 
 class SimpleModel:
-    def __init__(self, estimator: SecondQSwiftEstimator,
+    def __init__(self, estimator: IIDEstimator,
                  ansatz: Ansatz, N, lam, tool="qulacs", exact_cost=True):
         self.estimator = estimator
         self.ansatz = ansatz

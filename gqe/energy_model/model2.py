@@ -4,9 +4,9 @@ import torch, math
 import torch.optim as optim
 import pytorch_lightning as pl
 from qwrapper.obs import PauliObservable
-from qswift.qswift import OperatorPool, DefaultOperatorPool
-from qwrapper.sampler import ImportantSampler, FasterImportantSampler
-from gqe.energy_estimator.qswift import SecondQSwiftEstimator
+from qswift.qswift import OperatorPool
+from gqe.energy_estimator.ee2 import V2EnergyEstimator
+from gqe.energy_model.sampler import V2NaiveSampler
 from pytorch_lightning import Callback
 import numpy as np
 
@@ -29,7 +29,7 @@ def all(nqubit):
 
 
 class RecordEnergy(Callback):
-    def __init__(self, model: ):
+    def __init__(self, model):
         self.model = model
         self.records = []
 
@@ -48,44 +48,19 @@ class RecordEnergy(Callback):
                 f.write(f'{j}\t{record}\n')
 
 
-class NaiveSampler(ImportantSampler):
-    def __init__(self, nn, operator_pool: DefaultOperatorPool, beta):
-        self.nn = nn
-        self.beta = beta
-        self.all_paulis = operator_pool.paulis
-        self.sampler = self.reset()
-
-    def sample_index(self):
-        return self.sample_indices(1)[0]
-
-    def sample_indices(self, count=1):
-        return self.sampler.sample_indices(count)
-
-    def reset(self):
-        probs = self._all_probabilities()
-        self.sampler = FasterImportantSampler(probs)
-        return self.sampler
-
-    def _all_probabilities(self):
-        results = []
-        for f in self.nn.forward(self.all_paulis):
-            results.append(math.exp(-self.beta * f))
-        return results
-
-
-class EnergyModel(pl.LightningModule):
-    def __init__(self, sampler: NaiveSampler,
+class IIDEnergyModel(pl.LightningModule):
+    def __init__(self, sampler: V2NaiveSampler,
                  pool: OperatorPool,
-                 estimator: SecondQSwiftEstimator, lam, nqubit, n_samples, lr=1e-4,
+                 estimator: V2EnergyEstimator, N, n_sample=10,
+                 lr=1e-4,
                  beta1=0.0):
         super().__init__()
         self.save_hyperparameters()
         self.network = sampler.nn
         self.estimator = estimator
-        self.n_samples = n_samples
         self.sampler = sampler
-        self.lam = lam
-        self.nqubit = nqubit
+        self.N = N
+        self.n_sample = n_sample
         self._pool = pool
 
     def forward(self, paulis) -> Any:
@@ -102,17 +77,15 @@ class EnergyModel(pl.LightningModule):
     def training_step(self, batch):
         self.sampler.reset()
         loss = None
-        total_indices = []
         for _ in batch:
-            indices = self.sampler.sample_indices(1)
+            indices = self.sampler.sample_indices(count=self.N * self.n_sample)
+            fs = self.network.forward([self._pool.get(index) for index in indices]).reshape(self.n_sample, self.N)
+            sum_fs = torch.sum(fs, 1)
+            mean = sum_fs.mean()
             gs = []
-            for index in indices:
-                g = self.estimator.grad(self.sampler, self._pool, self.lam, index)
-                gs.append(g)
-            total_indices.extend(indices)
-            fs = self.sampler.nn.forward([self._pool.get(index) for index in indices])
-            mean = fs.mean()
-            value = -torch.dot(torch.flatten(fs) - mean, torch.tensor(gs, dtype=torch.float32)) / len(indices)
+            for chunk in indices.reshape(self.n_sample, self.N):
+                gs.append(self.estimator.evaluate(chunk))
+            value = -torch.dot(torch.flatten(sum_fs) - mean, torch.tensor(gs, dtype=torch.float32)) / (len(gs) * math.sqrt(self.N))
             if loss is None:
                 loss = value
             else:

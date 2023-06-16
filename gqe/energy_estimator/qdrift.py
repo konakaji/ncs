@@ -2,22 +2,22 @@ import numpy as np
 from qwrapper.circuit import init_circuit
 from qwrapper.obs import Hamiltonian
 
-from gqe.energy_estimator.ee import Sampler, EnergyEstimator
+from gqe.energy_estimator.ee import Sampler, GEnergyEstimator
 from gqe.energy_estimator.initializer import XInitializer
 from gqe.measurement import MeasurementMethod, AncillaMeasurementMethod
 import random, sys
 
 
-class QDriftEstimator(EnergyEstimator):
-    def __init__(self, hamiltonian: Hamiltonian, N, measurement=None, ancilla_measurement=None, tool='qulacs', shot=0):
-        super().__init__(hamiltonian)
-        self.nqubit = hamiltonian.nqubit
+class QDriftEstimator(GEnergyEstimator):
+    def __init__(self, obs: Hamiltonian, N, measurement=None, ancilla_measurement=None, tool='qulacs', shot=0):
+        super().__init__(obs)
+        self.nqubit = obs.nqubit
         if measurement is None:
-            self.mes_method = MeasurementMethod(hamiltonian)
+            self.mes_method = MeasurementMethod(obs)
         else:
             self.mes_method = measurement
         if ancilla_measurement is None:
-            self.ancilla_mes_method = AncillaMeasurementMethod(hamiltonian)
+            self.ancilla_mes_method = AncillaMeasurementMethod(obs)
         else:
             self.ancilla_mes_method = ancilla_measurement
         self.N = N

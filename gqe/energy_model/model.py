@@ -5,11 +5,11 @@ import torch.optim as optim
 import pytorch_lightning as pl
 
 from gqe.energy_model.sampler import NaiveSampler
-from gqe.energy_estimator.ee import EnergyEstimator
+from gqe.energy_estimator.ee import GEnergyEstimator
 
 
 class EnergyModel(pl.LightningModule):
-    def __init__(self, sampler: NaiveSampler, estimator: EnergyEstimator, n_samples, lr=1e-4, beta1=0.0):
+    def __init__(self, sampler: NaiveSampler, estimator: GEnergyEstimator, n_samples, lr=1e-4, beta1=0.0):
         super().__init__()
         self.save_hyperparameters()
         self.network = sampler.nn

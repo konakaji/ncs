@@ -6,7 +6,7 @@ from qwrapper.hamiltonian import HeisenbergModel, compute_ground_state
 from qwrapper.optimizer import AdamOptimizer, UnitLRScheduler, PrintMonitor, FileMonitor
 from qswift.initializer import XBasisInitializer
 from gqe.simple_model.model2 import SimpleModel, Ansatz
-from gqe.energy_estimator.qswift import SecondQSwiftEstimator
+from gqe.energy_estimator.qswift import IIDEstimator
 
 INPUT_FILENAME = '../saved_models/model_two___.json'
 OUTPUT_FILENAME = '../saved_models/model_two___detail.json'
@@ -29,9 +29,9 @@ if __name__ == '__main__':
                             PauliObservable("IX"), PauliObservable("IY"), PauliObservable("IZ"),
                             PauliObservable("XX"), PauliObservable("YY"), PauliObservable("ZZ")
                         ], nqubit=nqubit)
-    estimator = SecondQSwiftEstimator(hamiltonian,
-                                      XBasisInitializer(),
-                                      N, K=1, tool='qulacs', n_sample=n_sample, n_grad_sample=1)
+    estimator = IIDEstimator(hamiltonian,
+                             XBasisInitializer(),
+                             N, K=1, tool='qulacs', n_sample=n_sample, n_grad_sample=1)
     model = SimpleModel(estimator, ansatz, N, lam, n_sample)
     monitors = [PrintMonitor(), FileMonitor('../output/energy.txt')]
     model.run(AdamOptimizer(maxiter=200, scheduler=UnitLRScheduler(0.01), monitors=monitors))

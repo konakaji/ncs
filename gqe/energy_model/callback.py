@@ -3,7 +3,7 @@ import pytorch_lightning as pl
 from pytorch_lightning import Callback
 from qwrapper.hamiltonian import Hamiltonian
 from qswift.compiler import OperatorPool
-from gqe.energy_model.sampler import NaiveSampler, V2NaiveSampler
+from gqe.energy_model.sampler import NaiveSampler
 from gqe.energy_estimator.iid import IIDEstimator
 from gqe.energy_estimator.qdrift import QDriftEstimator
 from gqe.energy_estimator.general import GeneralEstimator
@@ -53,7 +53,7 @@ class IIDRecordEnergy(Callback):
 
 
 class V2ExactRecordEnergy(Callback):
-    def __init__(self, sampler: V2NaiveSampler, estimator: GeneralEstimator, lam, N, n_samples=0):
+    def __init__(self, sampler: NaiveSampler, estimator: GeneralEstimator, lam, N, n_samples=0):
         self.sampler = sampler
         self.estimator = estimator
         self.lam = lam

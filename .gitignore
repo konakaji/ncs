@@ -12,3 +12,4 @@ tutorial/*
 saved_models/*
 char_gen.py
 wonderland.txt
+task/lightning_logs

@@ -1,5 +1,4 @@
-import math, random, sys, emcee, numpy as np, torch
-from qswift.compiler import DefaultOperatorPool
+import math, random, sys, emcee, numpy as np
 from qwrapper.operator import ControllablePauli, PauliTimeEvolution
 from qwrapper.sampler import FasterImportantSampler, ImportantSampler
 from gqe.operator_pool.op import ListablePool
@@ -141,28 +140,3 @@ class DeepMCMCSampler:
             pstring += char
         result = ControllablePauli(pstring, sign)
         return result
-
-
-class V2NaiveSampler(ImportantSampler):
-    def __init__(self, nn, operator_pool: DefaultOperatorPool, beta):
-        self.nn = nn
-        self.beta = beta
-        self.all_paulis = [p for p in operator_pool.paulis.values()]
-        self.sampler = self.reset()
-
-    def sample_index(self):
-        return self.sample_indices(1)[0]
-
-    def sample_indices(self, count=1):
-        return self.sampler.sample_indices(count)
-
-    def reset(self):
-        probs = self.all_probabilities()
-        self.sampler = FasterImportantSampler(probs)
-        return self.sampler
-
-    def all_probabilities(self):
-        results = []
-        for p in torch.exp(-self.beta * self.nn.forward(self.all_paulis)).detach().numpy():
-            results.append(p[0])
-        return results

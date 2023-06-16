@@ -3,11 +3,11 @@ from torch.utils.data import DataLoader
 from gqe.energy_estimator.general import GeneralEstimator
 from gqe.energy_model.general import GeneralEnergyModel, all
 from gqe.energy_model.callback import V2ExactRecordEnergy
-from gqe.energy_model.sampler import V2NaiveSampler
+from gqe.energy_model.sampler import NaiveSampler
 from gqe.energy_model.network import PauliEnergy
+from gqe.operator_pool.op import AllPauliOperators
 from gqe.util import VoidDataset
 from qswift.initializer import XBasisInitializer
-from qswift.compiler import DefaultOperatorPool
 from qwrapper.hamiltonian import HeisenbergModel
 
 device = torch.device("cuda:0") if torch.cuda.is_available() else torch.device("cpu")
@@ -16,12 +16,12 @@ if __name__ == '__main__':
     nqubit = 3
     N = 1000
     lam = 12
-    pool = DefaultOperatorPool(all(nqubit))
+    pool = AllPauliOperators(nqubit)
     # dummy data loader
     dataloader = DataLoader(VoidDataset(), batch_size=1, shuffle=False, num_workers=0)
     # Sampler that samples from generative model
-    sampler = V2NaiveSampler(PauliEnergy(nqubit, 100, gpu=torch.cuda.is_available()),
-                             operator_pool=pool, beta=10)
+    sampler = NaiveSampler(PauliEnergy(nqubit, 100, gpu=torch.cuda.is_available()),
+                           operator_pool=pool, N=N, lam=lam, beta=10)
     # Energy estimator
     estimator = GeneralEstimator(pool, HeisenbergModel(nqubit), XBasisInitializer(), tau=lam / N)
     # Energy model

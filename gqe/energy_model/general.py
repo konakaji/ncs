@@ -6,9 +6,7 @@ import pytorch_lightning as pl
 from qwrapper.obs import PauliObservable
 from qswift.qswift import OperatorPool
 from gqe.energy_estimator.general import GeneralEstimator
-from gqe.energy_model.sampler import V2NaiveSampler
-from pytorch_lightning import Callback
-import numpy as np
+from gqe.energy_model.sampler import NaiveSampler
 
 
 def all(nqubit):
@@ -28,28 +26,8 @@ def all(nqubit):
     return paulis
 
 
-class RecordEnergy(Callback):
-    def __init__(self, model):
-        self.model = model
-        self.records = []
-
-    def on_train_epoch_end(self, trainer: "pl.Trainer", pl_module: "pl.LightningModule") -> None:
-        values = []
-        for j in range(self.n_samples):
-            values.append(self.estimator.fo_value(self.sampler))
-        mean = np.mean(values)
-        self.records.append(mean)
-        print(mean)
-        super().on_train_epoch_end(trainer, pl_module)
-
-    def save(self, path):
-        with open(path, 'w') as f:
-            for j, record in enumerate(self.records):
-                f.write(f'{j}\t{record}\n')
-
-
 class GeneralEnergyModel(pl.LightningModule):
-    def __init__(self, sampler: V2NaiveSampler,
+    def __init__(self, sampler: NaiveSampler,
                  pool: OperatorPool,
                  estimator: GeneralEstimator, N, n_sample=10,
                  lr=1e-4,
@@ -57,6 +35,7 @@ class GeneralEnergyModel(pl.LightningModule):
         super().__init__()
         self.save_hyperparameters()
         self.estimator = estimator
+        self.network = sampler.nn
         self.sampler = sampler
         self.N = N
         self.n_sample = n_sample

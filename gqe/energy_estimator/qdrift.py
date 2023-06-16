@@ -101,7 +101,6 @@ class Sampler(abc.ABC):
 
 class QDriftEstimator:
     def __init__(self, obs: Hamiltonian, N, measurement=None, ancilla_measurement=None, tool='qulacs', shot=0):
-        super().__init__(obs)
         self.nqubit = obs.nqubit
         if measurement is None:
             self.mes_method = MeasurementMethod(obs)

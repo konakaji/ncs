@@ -2,8 +2,6 @@ import math, random, sys, emcee, numpy as np, torch
 from qswift.compiler import DefaultOperatorPool
 from qwrapper.operator import ControllablePauli, PauliTimeEvolution
 from qwrapper.sampler import FasterImportantSampler, ImportantSampler
-
-from gqe.energy_estimator.ee import Sampler
 from gqe.operator_pool.op import ListablePool
 
 
@@ -59,7 +57,7 @@ class NaiveSampler(ImportantSampler):
         return results
 
 
-class DeepMCMCSampler(Sampler):
+class DeepMCMCSampler:
     def __init__(self, nn, N, lam, beta, nqubit):
         self.nn = nn
         self.nqubit = nqubit

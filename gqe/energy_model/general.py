@@ -48,7 +48,7 @@ class RecordEnergy(Callback):
                 f.write(f'{j}\t{record}\n')
 
 
-class IIDEnergyModel(pl.LightningModule):
+class GeneralEnergyModel(pl.LightningModule):
     def __init__(self, sampler: V2NaiveSampler,
                  pool: OperatorPool,
                  estimator: GeneralEstimator, N, n_sample=10,
@@ -56,7 +56,6 @@ class IIDEnergyModel(pl.LightningModule):
                  beta1=0.0):
         super().__init__()
         self.save_hyperparameters()
-        self.network = sampler.nn
         self.estimator = estimator
         self.sampler = sampler
         self.N = N
@@ -79,13 +78,14 @@ class IIDEnergyModel(pl.LightningModule):
         loss = None
         for _ in batch:
             indices = self.sampler.sample_indices(count=self.N * self.n_sample)
-            fs = self.network.forward([self._pool.get(index) for index in indices]).reshape(self.n_sample, self.N)
+            fs = self.sampler.nn.forward([self._pool.get(index) for index in indices]).reshape(self.n_sample, self.N)
             sum_fs = torch.sum(fs, 1)
             mean = sum_fs.mean()
             gs = []
             for chunk in indices.reshape(self.n_sample, self.N):
                 gs.append(self.estimator.evaluate(chunk))
-            value = -torch.dot(torch.flatten(sum_fs) - mean, torch.tensor(gs, dtype=torch.float32)) / (len(gs) * math.sqrt(self.N))
+            value = -torch.dot(torch.flatten(sum_fs) - mean, torch.tensor(gs, dtype=torch.float32)) / (
+                    len(gs) * math.sqrt(self.N))
             if loss is None:
                 loss = value
             else:

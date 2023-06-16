@@ -1,14 +1,105 @@
 import numpy as np
-from qwrapper.circuit import init_circuit
-from qwrapper.obs import Hamiltonian
+from qwrapper.circuit import init_circuit, QWrapper
+from qwrapper.measurement import MeasurementMethod
+from qwrapper.obs import Hamiltonian, PauliObservable
+from qwrapper.operator import ControllablePauli, PauliTimeEvolution
+from qwrapper.sampler import FasterImportantSampler
+import abc
+from abc import abstractmethod
 
-from gqe.energy_estimator.ee import Sampler, GEnergyEstimator
-from gqe.energy_estimator.initializer import XInitializer
-from gqe.measurement import MeasurementMethod, AncillaMeasurementMethod
 import random, sys
 
+"""
+This package is deprecated. Please use gqe.iid.IIDEstimator instead.
+"""
 
-class QDriftEstimator(GEnergyEstimator):
+
+class Initializer:
+    def initialize(self, qc, targets) -> QWrapper:
+        return qc
+
+
+class XInitializer(Initializer):
+    def initialize(self, qc, targets) -> QWrapper:
+        for t in targets:
+            qc.h(t)
+        return qc
+
+
+class AncillaMeasurementMethod(MeasurementMethod):
+    def __init__(self, hamiltonian: Hamiltonian):
+        paulis = []
+        for p in hamiltonian.paulis:
+            paulis.append(PauliObservable(p.p_string + "X", p.sign))
+        super().__init__(Hamiltonian(hamiltonian.hs, paulis, hamiltonian.nqubit))
+
+
+class StochasticMeasurementMethod(MeasurementMethod):
+    def __init__(self, hamiltonian: Hamiltonian, n_samples):
+        self.n_samples = n_samples
+        hs = []
+        signs = []
+        for h in hamiltonian.hs:
+            hs.append(abs(h))
+            sign = 1 if h > 0 else -1
+            signs.append(sign)
+        self.sampler = FasterImportantSampler(hs)
+        self.signs = signs
+        super().__init__(hamiltonian)
+
+    def exact_values(self, prepare):
+        res = []
+        paulis = self.hamiltonian.paulis
+        for index in self.sampler.sample_indices(self.n_samples):
+            qc = prepare()
+            pauli = paulis[index]
+            sign = self.signs[index]
+            res.append(sign * pauli.exact_value(qc))
+        return res
+
+    def get_values(self, prepare, ntotal=0, seed=None):
+        if seed is not None:
+            random.seed(seed)
+        if ntotal == 0:
+            return self.exact_values(prepare)
+        res = []
+        paulis = self.hamiltonian.paulis
+        nshot = int(ntotal / self.n_samples)
+        for index in self.sampler.sample_indices(self.n_samples):
+            qc = prepare()
+            pauli = paulis[index]
+            sign = self.signs[index]
+            res.append(sign * pauli.get_value(qc, nshot))
+        return res
+
+
+class AncillaStochasticMeasurementMethod(StochasticMeasurementMethod):
+    def __init__(self, hamiltonian: Hamiltonian, n_samples):
+        paulis = []
+        for p in hamiltonian.paulis:
+            paulis.append(PauliObservable(p.p_string + "X", p.sign))
+        super().__init__(Hamiltonian(hamiltonian.hs, paulis, hamiltonian.nqubit), n_samples)
+
+
+class Sampler(abc.ABC):
+    @abstractmethod
+    def sample_indices(self, count=1):
+        pass
+
+    @abstractmethod
+    def sample_operators(self, count=1) -> [ControllablePauli]:
+        pass
+
+    @abstractmethod
+    def sample_time_evolutions(self, count=1) -> [PauliTimeEvolution]:
+        pass
+
+    @abstractmethod
+    def get(self, index) -> ControllablePauli:
+        pass
+
+
+class QDriftEstimator:
     def __init__(self, obs: Hamiltonian, N, measurement=None, ancilla_measurement=None, tool='qulacs', shot=0):
         super().__init__(obs)
         self.nqubit = obs.nqubit

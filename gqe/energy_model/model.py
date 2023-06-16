@@ -7,6 +7,10 @@ import pytorch_lightning as pl
 from gqe.energy_model.sampler import NaiveSampler
 from gqe.energy_estimator.qdrift import QDriftEstimator
 
+"""
+This package is deprecated. 
+"""
+
 
 class EnergyModel(pl.LightningModule):
     def __init__(self, sampler: NaiveSampler, estimator: QDriftEstimator, n_samples, lr=1e-4, beta1=0.0):

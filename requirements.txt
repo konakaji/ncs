@@ -10,6 +10,7 @@ qiskit-ibmq-provider==0.20.0
 qiskit-terra==0.23.1
 qwrapper @ git+ssh://git@github.com/konakaji/qwrapper.git
 qswift @ git+ssh://git@github.com/konakaji/qswift.git
+benchmark @ git+ssh://git@github.com/konakaji/benchmark.git
 scipy>=1.7.0
 openfermion==1.5.1
 openfermionpyscf==0.5

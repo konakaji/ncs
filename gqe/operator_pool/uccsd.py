@@ -1,10 +1,10 @@
 import openfermion
-from gqe.operator_pool.op import OperatorPool
+from gqe.operator_pool.op import ListablePool
 from gqe.util import parse
 from openfermion.transforms import bravyi_kitaev, jordan_wigner
 
 
-class UCCSD(OperatorPool):
+class UCCSD(ListablePool):
     def __init__(self, nqubit, bk=True):
         single_amplitudes = []
         for i in range(nqubit):

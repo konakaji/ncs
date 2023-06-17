@@ -1,17 +1,21 @@
-import abc
-from abc import ABC, abstractmethod
+from abc import abstractmethod
 from qwrapper.operator import ControllablePauli
+from qswift.compiler import OperatorPool
 
 
-class OperatorPool(abc.ABC):
+class ListablePool(OperatorPool):
     @abstractmethod
     def all(self):
         pass
 
 
-class AllPauliOperator(OperatorPool):
+class AllPauliOperators(ListablePool):
     def __init__(self, nqubit):
         self.nqubit = nqubit
+        self.paulis = self.all()
+
+    def get(self, j):
+        return self.paulis[j]
 
     def all(self):
         results = [""]

@@ -1,13 +1,11 @@
 import math, random, sys, emcee, numpy as np
 from qwrapper.operator import ControllablePauli, PauliTimeEvolution
-from qwrapper.sampler import FasterImportantSampler
-
-from gqe.energy_estimator.ee import Sampler
-from gqe.operator_pool.op import OperatorPool
+from qwrapper.sampler import FasterImportantSampler, ImportantSampler
+from gqe.operator_pool.op import ListablePool
 
 
-class NaiveSampler(Sampler):
-    def __init__(self, nn, operator_pool: OperatorPool, N, lam, beta):
+class NaiveSampler(ImportantSampler):
+    def __init__(self, nn, operator_pool: ListablePool, N, lam, beta):
         self.nn = nn
         self.all_paulis = operator_pool.all()
         self.N = N
@@ -15,6 +13,9 @@ class NaiveSampler(Sampler):
         self.beta = beta
         self.sampler = self.reset()
         self.evolution_map = {}
+
+    def sample_index(self):
+        return self.sample_indices(1)[0]
 
     def sample_indices(self, count=1):
         return self.sampler.sample_indices(count)
@@ -44,18 +45,18 @@ class NaiveSampler(Sampler):
         return results
 
     def reset(self):
-        probs = self._all_probabilities()
+        probs = self.all_probabilities()
         self.sampler = FasterImportantSampler(probs)
         return self.sampler
 
-    def _all_probabilities(self):
+    def all_probabilities(self):
         results = []
         for f in self.nn.forward(self.all_paulis):
             results.append(math.exp(-self.beta * f))
         return results
 
 
-class DeepMCMCSampler(Sampler):
+class DeepMCMCSampler:
     def __init__(self, nn, N, lam, beta, nqubit):
         self.nn = nn
         self.nqubit = nqubit

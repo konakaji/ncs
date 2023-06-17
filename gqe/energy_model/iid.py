@@ -1,28 +1,26 @@
 from typing import Any
 
-import torch
-import torch.optim as optim
+import torch, torch.optim as optim
 import pytorch_lightning as pl
 
 from gqe.energy_model.sampler import NaiveSampler
-from gqe.energy_estimator.qdrift import QDriftEstimator
-
-"""
-This package is deprecated. 
-"""
+from gqe.energy_estimator.iid import IIDEstimator
+from qswift.compiler import OperatorPool
 
 
-class EnergyModel(pl.LightningModule):
-    def __init__(self, sampler: NaiveSampler, estimator: QDriftEstimator, n_samples, lr=1e-4, beta1=0.0):
+class IIDEnergyModel(pl.LightningModule):
+    def __init__(self, sampler: NaiveSampler, estimator: IIDEstimator, pool: OperatorPool, num_grad, lam, lr=1e-4, beta1=0.0):
         super().__init__()
         self.save_hyperparameters()
+        self.sampler = sampler
         self.network = sampler.nn
         self.estimator = estimator
-        self.n_samples = n_samples
-        self.sampler = sampler
+        self.pool = pool
+        self.num_grad = num_grad
+        self.lam = lam
 
     def forward(self, paulis) -> Any:
-        value = self.network.forward(paulis)
+        value = self.sampler.nn.forward(paulis)
         return value
 
     def configure_optimizers(self):
@@ -35,10 +33,9 @@ class EnergyModel(pl.LightningModule):
     def training_step(self, batch):
         self.sampler.reset()
         loss = None
-        total_indices = []
         for _ in batch:
-            gs, indices = self.estimator.grads(self.sampler)
-            total_indices.extend(indices)
+            indices = self.sampler.sample_indices(self.num_grad)
+            gs = [self.estimator.grad(self.sampler, self.pool, self.lam, index) for index in indices]
             fs = self.sampler.nn.forward(self.sampler.get_all(indices))
             mean = fs.mean()
             value = -torch.dot(torch.flatten(fs) - mean, torch.tensor(gs, dtype=torch.float32)) / len(indices)

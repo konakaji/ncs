@@ -21,13 +21,13 @@ pip install -r requirements.txt
 
 ## Usage 
 - Small-size experiment using the simple model
-  - /gqe/notebooks/run_heisenberg.ipynb (New!)
-  - /gqe/task/run_heisenberg.py
+  - [/gqe/notebooks/run_heisenberg.ipynb](https://github.com/konakaji/gqe/blob/master/notebooks/run_heisenberg.ipynb) (New!)
+  - [/gqe/task/run_heisenberg.py](https://github.com/konakaji/gqe/tree/master/task)
 - Small-size experiment using the energy-based model
-  - /gqe/task/run_heisenberg_iid.py
+  - [/gqe/task/run_heisenberg_iid.py](https://github.com/konakaji/gqe/blob/master/task/run_deep_heisenberg.py)
 
 ### Important modules
-See /gqe/notebooks/run_heisenberg.ipynb to learn how to combine those modules.
+See /gqe/notebooks/run_heisenberg.ipynb to learn hohttps://github.com/konakaji/gqe/blob/master/task/run_deep_heisenberg.py to combine those modules.
 
 #### /gqe/energy_estimator/
 The module to calculate the expectation value of the Hamiltonian and its gradient for each parameter. 

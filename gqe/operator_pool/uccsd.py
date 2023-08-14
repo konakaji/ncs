@@ -5,6 +5,7 @@ class UCCSD(ListablePool):
     def __init__(self, atom1type, atom2type, bond_length, basis_set,
                  method='MP2', threshold=1.e-6, trotter_steps=1):
         active_orbitals = {'A1': [1], "B1": [0]}
+        active_orbitals = [2, 3]
         geometry = (f"{atom1type} 0.0 0.0 0.0\n" +
                     f"{atom2type} 0.0 0.0 {bond_length}")
         molecule = tq.chemistry.Molecule(geometry=geometry,

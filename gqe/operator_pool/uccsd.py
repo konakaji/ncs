@@ -1,29 +1,21 @@
-import openfermion
 from gqe.operator_pool.op import ListablePool
-from gqe.util import parse
-from openfermion.transforms import bravyi_kitaev, jordan_wigner
-
+import tequila as tq
 
 class UCCSD(ListablePool):
-    def __init__(self, nqubit, bk=True):
-        single_amplitudes = []
-        for i in range(nqubit):
-            for j in range(nqubit):
-                single_amplitudes.append([[i, j], 1])
-
-        double_amplitudes = []
-        for i in range(nqubit):
-            for j in range(nqubit):
-                for k in range(nqubit):
-                    for l in range(nqubit):
-                        double_amplitudes.append([[i, j, k, l], 1])
-        operator = openfermion.circuits.uccsd_generator(single_amplitudes, double_amplitudes, anti_hermitian=False)
-        if bk:
-            fo = bravyi_kitaev(operator, nqubit)
-        else:
-            fo = jordan_wigner(operator)
-        _, operators, _ = parse(fo, nqubit)
-        self.operators = operators
+    def __init__(self, atom1type, atom2type, bond_length, basis_set,
+                 method='MP2', threshold=1.e-6, trotter_steps=1):
+        active_orbitals = {'A1': [1], "B1": [0]}
+        geometry = (f"{atom1type} 0.0 0.0 0.0\n" +
+                    f"{atom2type} 0.0 0.0 {bond_length}")
+        molecule = tq.chemistry.Molecule(geometry=geometry,
+                                          basis_set=basis_set,
+                                          active_orbitals=active_orbitals)
+        H = molecule.make_hamiltonian()
+        U = molecule.make_uccsd_ansatz(initial_amplitudes=method,
+                                       threshold=threshold,
+                                       trotter_steps=trotter_steps)
+        self.molecular_hamiltonian = H
+        self.uccsd_operator = U
 
     def all(self):
-        return self.operators
+        return self.molecular_hamiltonian, self.uccsd_operator

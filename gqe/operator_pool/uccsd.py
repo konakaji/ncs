@@ -1,22 +1,43 @@
 from gqe.operator_pool.op import ListablePool
+from qwrapper.operator import ControllablePauli
 import tequila as tq
 
+
 class UCCSD(ListablePool):
-    def __init__(self, atom1type, atom2type, bond_length, basis_set,
-                 method='MP2', threshold=1.e-6, trotter_steps=1):
-        active_orbitals = {'A1': [1], "B1": [0]}
-        active_orbitals = [2, 3]
-        geometry = (f"{atom1type} 0.0 0.0 0.0\n" +
-                    f"{atom2type} 0.0 0.0 {bond_length}")
-        molecule = tq.chemistry.Molecule(geometry=geometry,
-                                          basis_set=basis_set,
-                                          active_orbitals=active_orbitals)
-        H = molecule.make_hamiltonian()
-        U = molecule.make_uccsd_ansatz(initial_amplitudes=method,
+    def __init__(self, nqubit, molecule=None, method='MP2', threshold=1.e-6, trotter_steps=1,
+                 **kwargs):
+        if molecule is None:
+            atom1type = kwargs["atom1type"]
+            atom2type = kwargs["atom2type"]
+            bond_length = kwargs["bond_length"]
+            basis_set = kwargs["basis_set"]
+            molecule = generate_molecule(atom1type, atom2type, bond_length, basis_set)
+        u = molecule.make_uccsd_ansatz(initial_amplitudes=method,
                                        threshold=threshold,
                                        trotter_steps=trotter_steps)
-        self.molecular_hamiltonian = H
-        self.uccsd_operator = U
+        p_strings = set()
+        for g in u.gates:
+            p_array = ["I"] * nqubit
+            for p in g.generator.paulistrings:
+                for k, v in p.items():
+                    p_array[k] = v
+                p_string = "".join(p_array)
+                p_strings.add(p_string)
+        paulis = []
+        for p_string in p_strings:
+            paulis.append(ControllablePauli(p_string))
+        self.nqubit = nqubit
+        self.paulis = paulis
 
     def all(self):
-        return self.molecular_hamiltonian, self.uccsd_operator
+        return self.paulis
+
+
+def generate_molecule(atom1type, atom2type, bond_length, basis_set, active_orbitals=None):
+    geometry = (f"{atom1type} 0.0 0.0 0.0\n" +
+                f"{atom2type} 0.0 0.0 {bond_length}")
+    if active_orbitals is not None:
+        return tq.chemistry.Molecule(geometry=geometry,
+                                     basis_set=basis_set,
+                                     active_orbitals=active_orbitals)
+    return tq.chemistry.Molecule(geometry=geometry, basis_set=basis_set)

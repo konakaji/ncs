@@ -9,7 +9,7 @@ from gqe.energy_model.network import PauliEnergy
 from gqe.energy_estimator.qdrift import QDriftEstimator
 from gqe.hamiltonian.molecule import MolecularHamiltonian
 from gqe.measurement import StochasticMeasurementMethod, AncillaStochasticMeasurementMethod
-from gqe.operator_pool.uccsd import UCCSD
+from gqe.operator_pool.depr_uccsd import UCCSD
 from gqe.util import VoidDataset
 
 device = torch.device("cuda:0") if torch.cuda.is_available() else torch.device("cpu")

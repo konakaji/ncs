@@ -1,29 +1,43 @@
-import openfermion
 from gqe.operator_pool.op import ListablePool
-from gqe.util import parse
-from openfermion.transforms import bravyi_kitaev, jordan_wigner
+from qwrapper.operator import ControllablePauli
+import tequila as tq
 
 
 class UCCSD(ListablePool):
-    def __init__(self, nqubit, bk=True):
-        single_amplitudes = []
-        for i in range(nqubit):
-            for j in range(nqubit):
-                single_amplitudes.append([[i, j], 1])
-
-        double_amplitudes = []
-        for i in range(nqubit):
-            for j in range(nqubit):
-                for k in range(nqubit):
-                    for l in range(nqubit):
-                        double_amplitudes.append([[i, j, k, l], 1])
-        operator = openfermion.circuits.uccsd_generator(single_amplitudes, double_amplitudes, anti_hermitian=False)
-        if bk:
-            fo = bravyi_kitaev(operator, nqubit)
-        else:
-            fo = jordan_wigner(operator)
-        _, operators, _ = parse(fo, nqubit)
-        self.operators = operators
+    def __init__(self, nqubit, molecule=None, method='MP2', threshold=1.e-6, trotter_steps=1,
+                 **kwargs):
+        if molecule is None:
+            atom1type = kwargs["atom1type"]
+            atom2type = kwargs["atom2type"]
+            bond_length = kwargs["bond_length"]
+            basis_set = kwargs["basis_set"]
+            molecule = generate_molecule(atom1type, atom2type, bond_length, basis_set)
+        u = molecule.make_uccsd_ansatz(initial_amplitudes=method,
+                                       threshold=threshold,
+                                       trotter_steps=trotter_steps)
+        p_strings = set()
+        for g in u.gates:
+            p_array = ["I"] * nqubit
+            for p in g.generator.paulistrings:
+                for k, v in p.items():
+                    p_array[k] = v
+                p_string = "".join(p_array)
+                p_strings.add(p_string)
+        paulis = []
+        for p_string in p_strings:
+            paulis.append(ControllablePauli(p_string))
+        self.nqubit = nqubit
+        self.paulis = paulis
 
     def all(self):
-        return self.operators
+        return self.paulis
+
+
+def generate_molecule(atom1type, atom2type, bond_length, basis_set, active_orbitals=None):
+    geometry = (f"{atom1type} 0.0 0.0 0.0\n" +
+                f"{atom2type} 0.0 0.0 {bond_length}")
+    if active_orbitals is not None:
+        return tq.chemistry.Molecule(geometry=geometry,
+                                     basis_set=basis_set,
+                                     active_orbitals=active_orbitals)
+    return tq.chemistry.Molecule(geometry=geometry, basis_set=basis_set)

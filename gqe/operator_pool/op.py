@@ -17,6 +17,9 @@ class AllPauliOperators(ListablePool):
     def get(self, j):
         return self.paulis[j]
 
+    def size(self):
+        return len(self.paulis)
+
     def all(self):
         results = [""]
         for _ in range(self.nqubit):

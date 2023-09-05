@@ -291,7 +291,8 @@ class GPT(nn.Module):
             energies[j] = self._cost.energy(idx_output)
             logits_tensors[j] = logits_tensor
         mean_logits = torch.mean(logits_tensors, 1)
-        print(torch.mean(energies))
+        print("energies:", energies)
+        print("mean:", torch.mean(energies))
         loss = torch.nn.MSELoss()
         return loss(mean_logits, energies)
         # return (mean_logits.dot(energies)

@@ -29,6 +29,9 @@ class UCCSD(ListablePool):
         self.nqubit = nqubit
         self.paulis = paulis
 
+    def size(self):
+        return len(self.paulis)
+
     def all(self):
         return self.paulis
 

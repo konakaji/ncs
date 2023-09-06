@@ -5,7 +5,7 @@ import torch.optim as optim
 import pytorch_lightning as pl
 from qwrapper.obs import PauliObservable
 from qswift.qswift import OperatorPool
-from gqe.energy_estimator.general import GeneralEstimator
+from gqe.energy_estimator.noniid import NonIIDEstimator
 from gqe.energy_model.sampler import NaiveSampler
 
 
@@ -29,7 +29,7 @@ def all(nqubit):
 class GeneralEnergyModel(pl.LightningModule):
     def __init__(self, sampler: NaiveSampler,
                  pool: OperatorPool,
-                 estimator: GeneralEstimator, N, n_sample=10,
+                 estimator: NonIIDEstimator, N, n_sample=10,
                  lr=1e-4,
                  beta1=0.0):
         super().__init__()

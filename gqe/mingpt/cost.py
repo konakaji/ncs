@@ -31,8 +31,14 @@ class EnergyCost(Cost):
         self.sequence = Sequence(obs, initializer, pool, taus=taus, nshot=nshot, tool=tool)
 
     def energy(self, idx):
-        indices = idx[0][1:].detach().numpy()
-        return torch.tensor(self.sequence.evaluate(indices))
+        """
+        :param idx: shape(# of data, length of sequence)
+        :return energy
+        """
+        energies = []
+        for seq in idx:
+            energies.append(self.sequence.evaluate(seq.detach().numpy()))
+        return torch.tensor(energies)
 
     def vocab_size(self):
         return self.sequence.operator_pool.size() * len(self.sequence.taus)

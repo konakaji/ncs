@@ -27,7 +27,8 @@ class IIDEstimator:
             raise AttributeError("K > 1 is not implemented")
         obs = make_positive(obs)
         self.hamiltonian = obs
-        self.qswift = QSwift(obs, initializer, t=1, N=N, K=K, n_p=n_sample)
+        self.tool = tool
+        self.qswift = QSwift(obs, initializer, t=1, N=N, K=K, n_p=n_sample,tool=self.tool)
         self.obs = obs.gen_ancilla_hamiltonian("X")
         if shot == 0:
             # Directly calculate the expectation value of the Hamiltonian
@@ -39,7 +40,7 @@ class IIDEstimator:
         self.executor = QSwiftExecutor()
         self.N = N
         self.K = K
-        self.tool = tool
+        
         self.shot = shot
         self.n_sample = n_sample
         self.n_grad_sample = n_grad_sample

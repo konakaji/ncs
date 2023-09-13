@@ -105,7 +105,7 @@ def find_ground_state_energy(distance, seed, ignore_cache=False):
     monitors = [PrintMonitor(), file_monitor]
 
     # run
-    model.run(AdamOptimizer(maxiter=1, scheduler=UnitLRScheduler(0.01), monitors=monitors))
+    model.run(AdamOptimizer(maxiter=iter, scheduler=UnitLRScheduler(0.01), monitors=monitors))
     for m in monitors:
         m.finalize()
 

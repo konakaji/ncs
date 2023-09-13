@@ -125,7 +125,6 @@ class GPT(nn.Module):
         self.block_size = config.block_size
         self._cost = cost
         self.n_gates = config.n_gates
-        self.n_samples = config.n_samples
         self.temperature = config.temperature
         type_given = config.model_type is not None
         params_given = all([config.n_layer is not None, config.n_head is not None, config.n_embd is not None])
@@ -281,22 +280,17 @@ class GPT(nn.Module):
             x = block(x)
         x = self.transformer.ln_f(x)
         logits = self.lm_head(x)
-        return logits[:, -1, :]
+        return logits
 
     def cost(self, idx):
-        energies = torch.empty(self.n_samples)
-        logits_tensors = torch.empty(self.n_samples, self.n_gates)
-        for j in range(self.n_samples):
-            idx_output, logits_tensor = self.generate(idx, self.n_gates)
-            energies[j] = self._cost.energy(idx_output)
-            logits_tensors[j] = logits_tensor
+        idx_output, logits_tensor = self.generate(idx, self.n_gates)
+        energies = self._cost.energy(idx_output)
+        logits_tensors = logits_tensor
         mean_logits = torch.mean(logits_tensors, 1)
         print("energies:", energies)
         print("mean:", torch.mean(energies))
         loss = torch.nn.MSELoss()
         return loss(mean_logits, energies)
-        # return (mean_logits.dot(energies)
-        #         - torch.mean(mean_logits) * torch.mean(energies))
 
     def generate(self, idx, max_new_tokens):
         """
@@ -304,19 +298,24 @@ class GPT(nn.Module):
         the sequence max_new_tokens times, feeding the predictions back into the model each time.
         Most likely you'll want to make sure to be in model.eval() mode of operation for this.
         """
-        logits_tensor = torch.empty(max_new_tokens)
+        b_size = idx.size(dim=0)
+        condition_length = idx.size(dim=1)
+        # logits_tensor = torch.empty((max_new_tokens, b_size))
         for pos in range(max_new_tokens):
             # if the sequence context is growing too long we must crop it at block_size
             idx_cond = idx if idx.size(1) <= self.block_size else idx[:, -self.block_size:]
             # forward the model to get the logits for the index in the sequence
-            logits = self.generate_logits(idx_cond)
+            logits_base = self.generate_logits(idx_cond)
+            logits = logits_base[:, -1, :]
             probs = F.softmax(-self.temperature * logits, dim=-1)
             # either sample from the distribution or take the most likely element
             idx_next = torch.multinomial(probs, num_samples=1)
-            logits_tensor[pos] = logits[0][idx_next.item()]
+            # logits_tensor[pos] = torch.gather(logits, 1, idx_next).flatten()
             # append sampled index to the running sequence and continue
             idx = torch.cat((idx, idx_next), dim=1)
-        return idx, logits_tensor
+        idx = idx[:, condition_length:]
+        # print(logits_tensor.T)
+        return idx, torch.gather(logits_base, 2, idx.reshape(b_size, -1, 1)).reshape(b_size, -1)
 
     def forward(self, idx):
         loss = self.cost(idx)

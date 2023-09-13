@@ -44,6 +44,7 @@ class Trainer:
         print("running on device", self.device)
 
         # variables that will be assigned to trainer class later for logging and etc
+        self.num_samples = config.n_samples
         self.iter_num = 0
         self.iter_time = 0.0
         self.iter_dt = 0.0
@@ -65,7 +66,7 @@ class Trainer:
         self.optimizer = model.configure_optimizers(config)
 
         while True:
-            self.loss = model(torch.zeros(1, 1, dtype=torch.int))
+            self.loss = model(torch.zeros(self.num_samples, 1, dtype=torch.int))
 
             # backprop and update the parameters
             model.zero_grad(set_to_none=True)

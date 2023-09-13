@@ -283,9 +283,6 @@ class GPT(nn.Module):
         return logits
 
     def cost(self, idx):
-        # energies = torch.empty(self.n_samples)
-        # logits_tensors = torch.empty(self.n_samples, self.n_gates)
-        # for j in range(self.n_samples):
         idx_output, logits_tensor = self.generate(idx, self.n_gates)
         energies = self._cost.energy(idx_output)
         logits_tensors = logits_tensor
@@ -303,7 +300,7 @@ class GPT(nn.Module):
         """
         b_size = idx.size(dim=0)
         condition_length = idx.size(dim=1)
-        logits_tensor = torch.empty((max_new_tokens, b_size))
+        # logits_tensor = torch.empty((max_new_tokens, b_size))
         for pos in range(max_new_tokens):
             # if the sequence context is growing too long we must crop it at block_size
             idx_cond = idx if idx.size(1) <= self.block_size else idx[:, -self.block_size:]
@@ -313,11 +310,12 @@ class GPT(nn.Module):
             probs = F.softmax(-self.temperature * logits, dim=-1)
             # either sample from the distribution or take the most likely element
             idx_next = torch.multinomial(probs, num_samples=1)
-            logits_tensor[pos] = torch.gather(logits, 1, idx_next).flatten()
+            # logits_tensor[pos] = torch.gather(logits, 1, idx_next).flatten()
             # append sampled index to the running sequence and continue
             idx = torch.cat((idx, idx_next), dim=1)
         idx = idx[:, condition_length:]
-        return idx, logits_tensor.T
+        # print(logits_tensor.T)
+        return idx, torch.gather(logits_base, 2, idx.reshape(b_size, -1, 1)).reshape(b_size, -1)
 
     def forward(self, idx):
         loss = self.cost(idx)

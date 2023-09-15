@@ -38,7 +38,7 @@ class EnergyCost(Cost):
         energies = []
         for seq in idx:
             energies.append(self.sequence.evaluate(seq.detach().numpy()))
-        return torch.tensor(energies)
+        return torch.tensor(energies, dtype=torch.float)
 
     def vocab_size(self):
         return self.sequence.operator_pool.size() * len(self.sequence.taus)

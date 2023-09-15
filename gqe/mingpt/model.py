@@ -285,12 +285,14 @@ class GPT(nn.Module):
     def cost(self, idx):
         idx_output, logits_tensor = self.generate(idx, self.n_gates)
         energies = self._cost.energy(idx_output)
-        logits_tensors = logits_tensor
-        mean_logits = torch.mean(logits_tensors, 1)
+        mean_logits = torch.mean(logits_tensor, 1)
+        print(idx_output)
+        print("mean_logits", mean_logits)
         print("energies:", energies)
         print("mean:", torch.mean(energies))
         loss = torch.nn.MSELoss()
-        return loss(mean_logits, energies)
+        return loss(torch.exp(-mean_logits), torch.exp(-energies))
+        # return loss(mean_logits, energies)
 
     def generate(self, idx, max_new_tokens):
         """

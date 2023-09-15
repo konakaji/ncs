@@ -24,7 +24,7 @@ class UCCSD(ListablePool):
                 p_string = "".join(p_array)
                 p_strings.add(p_string)
         paulis = []
-        for p_string in p_strings:
+        for p_string in sorted(p_strings):
             paulis.append(ControllablePauli(p_string))
         self.nqubit = nqubit
         self.paulis = paulis

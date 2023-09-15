@@ -12,12 +12,17 @@ These instructions will get you a copy of the project up and running on your loc
 
 - We checked it works with Python 3.8.
 
-### Installation
+### General Installation
 
 ```
 pip install -r requirements.txt
 ```
 
+#### For Mac with M1 chip
+```
+bash install.sh
+```
+That is necessary for installing tequilla.
 
 ## Usage 
 - Small-size experiment using the simple model

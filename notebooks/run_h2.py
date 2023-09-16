@@ -1,5 +1,23 @@
-from benchmark.molecule import DiatomicMolecularHamiltonian
+
+
+import torch
+import os
+import sys
+import time
+import logging
+import json
+import timeit
+import cudaq
+import numpy as np
+import random
+from gqe.energy_estimator.iid import IIDEstimator
+from gqe.simple_model.model import SimpleModel, Ansatz
+from gqe.common.initializer import HFStateInitializer
+from qwrapper.optimizer import AdamOptimizer, UnitLRScheduler, PrintMonitor, FileMonitor
+from qwrapper.hamiltonian import compute_ground_state
+from qswift.compiler import Compiler
 from gqe.operator_pool.uccsd import UCCSD, generate_molecule
+from benchmark.molecule import DiatomicMolecularHamiltonian
 
 N = 8000
 n_sample = 1000
@@ -7,19 +25,14 @@ iter = 1000
 lam = 30
 nqubit = 4
 seed = 30
-distances = [0.5, 0.6, 0.7, 0.7414, 0.8, 0.9, 1.0, 1.5, 2.0]  # choices of the distance between two atoms
+# choices of the distance between two atoms
+distances = [0.5, 0.6, 0.7, 0.7414, 0.8, 0.9, 1.0, 1.5, 2.0]
 
-import random, json, os, torch
-import numpy as np, logging, time
-import cudaq, timeit
+random.seed(seed)
+np.random.seed(seed)
+torch.manual_seed(seed)
+torch.cuda.manual_seed_all(seed)
 
-from qwrapper.cudaq import CUDAQuantumCircuit
-from qswift.compiler import Compiler
-from qwrapper.hamiltonian import compute_ground_state
-from qwrapper.optimizer import AdamOptimizer, UnitLRScheduler, PrintMonitor, FileMonitor
-from gqe.common.initializer import HFStateInitializer
-from gqe.simple_model.model import SimpleModel, Ansatz
-from gqe.energy_estimator.iid import IIDEstimator
 
 MODEL_FILEBASE = '../saved_models/model_h2_sto3g_{}_{}.json'
 ENERGY_FILEBASE = 'energy_h2_sto3g_{}_{}.txt'
@@ -37,36 +50,35 @@ class MyQSwiftExecutor:
             string = compiler.to_string(swift_channel)
             strings.extend(string)
         middle = time.time()
-        self.logger.debug(f"to_string ({len(swift_channels)}): {middle - start}")
+        self.logger.debug(
+            f"to_string ({len(swift_channels)}): {middle - start}")
         values = []
         start = timeit.default_timer()
-        
+
         numQpus = cudaq.get_target().num_qpus()
         qpuCounter = 0
         for j, string in enumerate(strings):
-            value = compiler.evaluate(string, qpu_id=qpuCounter % numQpus, parallelObserve=numQpus > 1)
+            value = compiler.evaluate(
+                string, qpu_id=qpuCounter % numQpus, parallelObserve=numQpus > 1)
             qpuCounter += 1
             values.append(value)
             if j % 1000 == 0:
                 logging.info(f"{j}")
-        self.logger.debug(f"evaluate ({len(swift_channels)}): {time.time() - middle}")
+        self.logger.debug(
+            f"evaluate ({len(swift_channels)}): {time.time() - middle}")
 
         if numQpus > 1:
-            values = [c * v.get().expectation_z() for (c,v) in values]
+            values = [c * v.get().expectation_z() for (c, v) in values]
         
         end = timeit.default_timer()
-        if len(values): print('Time = {} sec'.format(end-start))
+        if len(values):
+            print('Time = {} sec, G = {}'.format(end-start, np.sum(values)))
         # if len(values): print(values)
 
         return np.sum(values)
 
-random.seed(seed)
-np.random.seed(seed)
-torch.manual_seed(seed)
-torch.cuda.manual_seed_all(seed)
-    
-def find_ground_state_energy(distance, seed, ignore_cache=False):
 
+def find_ground_state_energy(distance, seed, ignore_cache=False):
 
     molecule = generate_molecule("H", "H", distance, "sto-3g")
     # prepare file
@@ -91,13 +103,14 @@ def find_ground_state_energy(distance, seed, ignore_cache=False):
                     paulis, nqubit=nqubit)
 
     # prepare simple model
+    useCUDAQ = True if '--use-cudaq' in sys.argv else False
     estimator = IIDEstimator(hamiltonian,
                              HFStateInitializer(n_electrons=2),
-                             N, K=0, tool=CUDAQuantumCircuit(5), n_sample=n_sample, n_grad_sample=1, executor=MyQSwiftExecutor())
-    
-    # estimator = IIDEstimator(hamiltonian,
-    #                         HFStateInitializer(n_electrons=2),
-    #                         N, K=0, n_sample=n_sample, n_grad_sample=1, executor=MyQSwiftExecutor())
+                             N, K=0, tool='cudaq',
+                             n_sample=n_sample, n_grad_sample=1,
+                             executor=MyQSwiftExecutor()) if useCUDAQ else IIDEstimator(hamiltonian, HFStateInitializer(n_electrons=2),
+                                                                                        N, K=0, n_sample=n_sample, n_grad_sample=1,
+                                                                                        executor=MyQSwiftExecutor())
 
     model = SimpleModel(estimator, ansatz, N, lam, n_sample)
     file_monitor = FileMonitor(energy_output)
@@ -105,7 +118,8 @@ def find_ground_state_energy(distance, seed, ignore_cache=False):
     monitors = [PrintMonitor(), file_monitor]
 
     # run
-    model.run(AdamOptimizer(maxiter=iter, scheduler=UnitLRScheduler(0.01), monitors=monitors))
+    model.run(AdamOptimizer(maxiter=iter,
+              scheduler=UnitLRScheduler(0.01), monitors=monitors))
     for m in monitors:
         m.finalize()
 
@@ -122,5 +136,6 @@ def find_ground_state_energy(distance, seed, ignore_cache=False):
          "n_gates": N, "lam": lam, "seed": seed}
     with open(other_output, "w") as f:
         f.write(json.dumps(m))
+
 
 find_ground_state_energy(.7474, seed, ignore_cache=False)

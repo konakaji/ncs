@@ -286,7 +286,6 @@ class GPT(nn.Module):
         idx_output, logits_tensor = self.generate(idx, self.n_gates)
         energies = self._cost.energy(idx_output)
         mean_logits = torch.mean(logits_tensor, 1)
-        print(idx_output)
         print("mean_logits", mean_logits)
         print("energies:", energies)
         print("mean:", torch.mean(energies))

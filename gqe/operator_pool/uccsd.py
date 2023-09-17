@@ -36,11 +36,14 @@ class UCCSD(ListablePool):
         return self.paulis
 
 
-def generate_molecule(atom1type, atom2type, bond_length, basis_set, active_orbitals=None):
+def generate_molecule(atom1type, atom2type, bond_length, basis_set, active_orbitals=None, bravyi_kitaev=True):
     geometry = (f"{atom1type} 0.0 0.0 0.0\n" +
                 f"{atom2type} 0.0 0.0 {bond_length}")
+    transformation = "jordan-wigner"
+    if bravyi_kitaev:
+        transformation = "bravyi-kitaev"
     if active_orbitals is not None:
         return tq.chemistry.Molecule(geometry=geometry,
                                      basis_set=basis_set,
-                                     active_orbitals=active_orbitals)
+                                     active_orbitals=active_orbitals, transformation=transformation)
     return tq.chemistry.Molecule(geometry=geometry, basis_set=basis_set)

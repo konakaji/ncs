@@ -113,6 +113,7 @@ class GPT(nn.Module):
         C.vocab_size = None
         C.block_size = None
         # dropout hyperparameters
+        C.energy_scaling = 1
         C.embd_pdrop = 0.1
         C.resid_pdrop = 0.1
         C.attn_pdrop = 0.1
@@ -123,6 +124,7 @@ class GPT(nn.Module):
         assert config.vocab_size is not None
         assert config.block_size is not None
         self.block_size = config.block_size
+        self.energy_scaling = config.energy_scaling
         self._cost = cost
         self.n_gates = config.n_gates
         self.temperature = config.temperature
@@ -286,11 +288,11 @@ class GPT(nn.Module):
         idx_output, logits_tensor = self.generate(idx, self.n_gates)
         energies = self._cost.energy(idx_output)
         mean_logits = torch.mean(logits_tensor, 1)
-        print("mean_logits", mean_logits)
+        print("mean_logits", mean_logits * self.energy_scaling)
         print("energies:", energies)
         print("mean:", torch.mean(energies))
         loss = torch.nn.MSELoss()
-        return loss(torch.exp(-mean_logits), torch.exp(-energies))
+        return loss(torch.exp(-mean_logits), torch.exp(-energies / self.energy_scaling))
         # return loss(mean_logits, energies)
 
     def generate(self, idx, max_new_tokens):

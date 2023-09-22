@@ -16,6 +16,7 @@ from torch.nn import functional as F
 
 from gqe.mingpt.utils import CfgNode as CN
 from gqe.mingpt.cost import Cost
+from gqe.util import get_device
 
 
 # -----------------------------------------------------------------------------
@@ -113,10 +114,11 @@ class GPT(nn.Module):
         C.vocab_size = None
         C.block_size = None
         # dropout hyperparameters
-        C.energy_scaling = 1
+        C.energy_offset = 0.0
         C.embd_pdrop = 0.1
         C.resid_pdrop = 0.1
         C.attn_pdrop = 0.1
+        C.std = 0.02
         return C
 
     def __init__(self, config, cost: Cost):
@@ -124,7 +126,7 @@ class GPT(nn.Module):
         assert config.vocab_size is not None
         assert config.block_size is not None
         self.block_size = config.block_size
-        self.energy_scaling = config.energy_scaling
+        self.energy_offset = torch.tensor(config.energy_offset).to(get_device())
         self._cost = cost
         self.n_gates = config.n_gates
         self.temperature = config.temperature
@@ -159,12 +161,13 @@ class GPT(nn.Module):
             ln_f=nn.LayerNorm(config.n_embd),
         ))
         self.lm_head = nn.Linear(config.n_embd, config.vocab_size, bias=False)
+        self.std = config.std
 
         # init all weights, and apply a special scaled init to the residual projections, per GPT-2 paper
         self.apply(self._init_weights)
         for pn, p in self.named_parameters():
             if pn.endswith('c_proj.weight'):
-                torch.nn.init.normal_(p, mean=0.0, std=0.02 / math.sqrt(2 * config.n_layer))
+                torch.nn.init.normal_(p, mean=0.0, std=self.std / math.sqrt(2 * config.n_layer))
 
         # report number of parameters (note we don't count the decoder parameters in lm_head)
         n_params = sum(p.numel() for p in self.transformer.parameters())
@@ -172,11 +175,11 @@ class GPT(nn.Module):
 
     def _init_weights(self, module):
         if isinstance(module, nn.Linear):
-            torch.nn.init.normal_(module.weight, mean=0.0, std=0.02)
+            torch.nn.init.normal_(module.weight, mean=0.0, std=self.std)
             if module.bias is not None:
                 torch.nn.init.zeros_(module.bias)
         elif isinstance(module, nn.Embedding):
-            torch.nn.init.normal_(module.weight, mean=0.0, std=0.02)
+            torch.nn.init.normal_(module.weight, mean=0.0, std=self.std)
         elif isinstance(module, nn.LayerNorm):
             torch.nn.init.zeros_(module.bias)
             torch.nn.init.ones_(module.weight)
@@ -292,7 +295,7 @@ class GPT(nn.Module):
                                    logits=logits_tensor,
                                    energies=energies)
         loss = torch.nn.MSELoss()
-        value = loss(torch.exp(-mean_logits), torch.exp(-energies / self.energy_scaling))
+        value = loss(torch.exp(-mean_logits), torch.exp(-energies - self.energy_offset))
         return value, detail
 
     def generate(self, idx, max_new_tokens):
@@ -303,21 +306,14 @@ class GPT(nn.Module):
         """
         b_size = idx.size(dim=0)
         condition_length = idx.size(dim=1)
-        # logits_tensor = torch.empty((max_new_tokens, b_size))
         for pos in range(max_new_tokens):
-            # if the sequence context is growing too long we must crop it at block_size
             idx_cond = idx if idx.size(1) <= self.block_size else idx[:, -self.block_size:]
-            # forward the model to get the logits for the index in the sequence
             logits_base = self.generate_logits(idx_cond)
             logits = logits_base[:, -1, :]
             probs = F.softmax(-self.temperature * logits, dim=-1)
-            # either sample from the distribution or take the most likely element
             idx_next = torch.multinomial(probs, num_samples=1)
-            # logits_tensor[pos] = torch.gather(logits, 1, idx_next).flatten()
-            # append sampled index to the running sequence and continue
             idx = torch.cat((idx, idx_next), dim=1)
         idx = idx[:, condition_length:]
-        # print(logits_tensor.T)
         return idx, torch.gather(logits_base, 2, idx.reshape(b_size, -1, 1)).reshape(b_size, -1)
 
     def forward(self, idx):

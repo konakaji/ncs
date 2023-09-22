@@ -9,6 +9,7 @@ from collections import defaultdict
 import torch
 from torch.utils.data.dataloader import DataLoader
 from gqe.mingpt.utils import CfgNode as CN
+from gqe.util import get_device
 
 
 class Trainer:
@@ -37,7 +38,7 @@ class Trainer:
 
         # determine the device we'll train on
         if config.device == 'auto':
-            self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
+            self.device = get_device()
         else:
             self.device = config.device
         self.model = self.model.to(self.device)
@@ -66,7 +67,8 @@ class Trainer:
         self.optimizer = model.configure_optimizers(config)
 
         while True:
-            self.loss, detail = model(torch.zeros(self.num_samples, 1, dtype=torch.int))
+            input = torch.zeros(self.num_samples, 1, dtype=torch.int).to(self.device)
+            self.loss, detail = model(input)
             # backprop and update the parameters
             model.zero_grad(set_to_none=True)
             self.loss.backward()

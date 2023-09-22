@@ -3,6 +3,7 @@ from gqe.operator_pool.op import ListablePool
 from qswift.sequence import Sequence
 from qswift.initializer import CircuitInitializer
 from qwrapper.obs import Hamiltonian
+from gqe.util import get_device
 import torch
 
 
@@ -27,8 +28,11 @@ class IndicesCost(Cost):
 class EnergyCost(Cost):
     def __init__(self, obs: Hamiltonian,
                  initializer: CircuitInitializer,
-                 pool: ListablePool, taus, nshot=0, tool='qulacs'):
+                 pool: ListablePool, taus, nshot=0, tool='qulacs', device=None):
+        if device is None:
+            device = get_device()
         self.sequence = Sequence(obs, initializer, pool, taus=taus, nshot=nshot, tool=tool)
+        self.device = device
 
     def energy(self, idx):
         """
@@ -37,8 +41,8 @@ class EnergyCost(Cost):
         """
         energies = []
         for seq in idx:
-            energies.append(self.sequence.evaluate(seq.detach().numpy()))
-        return torch.tensor(energies, dtype=torch.float)
+            energies.append(self.sequence.evaluate(seq.detach().cpu().numpy()))
+        return torch.tensor(energies, dtype=torch.float).to(self.device)
 
     def vocab_size(self):
         return self.sequence.operator_pool.size() * len(self.sequence.taus)

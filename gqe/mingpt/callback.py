@@ -1,5 +1,5 @@
 from abc import abstractmethod
-import torch, json
+import torch, json, sys
 
 
 class Monitor:
@@ -12,7 +12,7 @@ class PrintMonitor(Monitor):
     def record(self, model, trainer, detail):
         print(
             f"iter_dt {trainer.iter_dt:.2f}s; iter {trainer.iter_num}: train loss {trainer.loss.item():.5f} temperature: {model.temperature}")
-        print("mean_logits", torch.mean(detail.logits, 1) * model.energy_scaling)
+        print("mean_logits", torch.mean(detail.logits, 1) - model.energy_offset)
         print("energies:", detail.energies)
         print("mean:", torch.mean(detail.energies))
 
@@ -20,15 +20,23 @@ class PrintMonitor(Monitor):
 class FileMonitor(Monitor):
     def __init__(self):
         self.lines = []
+        self.min_energy = sys.maxsize
+        self.min_indices = None
 
     def record(self, model, trainer, detail):
+        energies = detail.energies.cpu().numpy().tolist()
+        indices = detail.indices.cpu().numpy().tolist()
         line = {
             "iter": trainer.iter_num,
             "loss": trainer.loss.item(),
-            "indices": detail.indices.numpy().tolist(),
-            "energies": detail.energies.numpy().tolist()
+            "indices": indices,
+            "energies": energies
         }
         self.lines.append(line)
+        for j, e in enumerate(energies):
+            if e < self.min_energy:
+                self.min_energy = e
+                self.min_indices = indices[j]
 
     def save(self, path):
         with open(path, 'w') as f:

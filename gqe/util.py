@@ -1,11 +1,19 @@
 from qwrapper.operator import ControllablePauli
 from openfermion import FermionOperator
 from torch.utils.data import Dataset
-import random
+import random, torch
 
 
 def identity(nqubit):
     return ControllablePauli("".join(["I" for _ in range(nqubit)]))
+
+
+def get_device():
+    if torch.cuda.is_available():
+        return 'cuda'
+    elif torch.backends.mps.is_available():
+        return 'mps'
+    return 'cpu'
 
 
 def parse(operator: FermionOperator, nqubit):

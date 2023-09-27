@@ -9,6 +9,7 @@ from collections import defaultdict
 import torch
 from torch.utils.data.dataloader import DataLoader
 from gqe.mingpt.utils import CfgNode as CN
+from gqe.util import get_device
 
 
 class Trainer:
@@ -37,7 +38,7 @@ class Trainer:
 
         # determine the device we'll train on
         if config.device == 'auto':
-            self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
+            self.device = get_device()
         else:
             self.device = config.device
         self.model = self.model.to(self.device)
@@ -55,9 +56,9 @@ class Trainer:
     def set_callback(self, onevent: str, callback):
         self.callbacks[onevent] = [callback]
 
-    def trigger_callbacks(self, onevent: str):
+    def trigger_callbacks(self, onevent: str, args):
         for callback in self.callbacks.get(onevent, []):
-            callback(self)
+            callback(self, args)
 
     def run(self):
         model, config = self.model, self.config
@@ -66,15 +67,15 @@ class Trainer:
         self.optimizer = model.configure_optimizers(config)
 
         while True:
-            self.loss = model(torch.zeros(self.num_samples, 1, dtype=torch.int))
-
+            input = torch.zeros(self.num_samples, 1, dtype=torch.int).to(self.device)
+            self.loss, detail = model(input)
             # backprop and update the parameters
             model.zero_grad(set_to_none=True)
             self.loss.backward()
             torch.nn.utils.clip_grad_norm_(model.parameters(), config.grad_norm_clip)
             self.optimizer.step()
 
-            self.trigger_callbacks('on_batch_end')
+            self.trigger_callbacks('on_batch_end', detail)
             self.iter_num += 1
             tnow = time.time()
             self.iter_dt = tnow - self.iter_time

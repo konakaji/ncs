@@ -1,6 +1,8 @@
 from qwrapper.operator import ControllablePauli
 from openfermion import FermionOperator
 from torch.utils.data import Dataset
+from qswift.sequence import Sequence
+from qml.core.pqc import TimeEvolutionPQC
 import random, torch
 
 
@@ -14,6 +16,24 @@ def get_device():
     elif torch.backends.mps.is_available():
         return 'mps'
     return 'cpu'
+
+
+def to_time_evolutions(sequence: Sequence, indices):
+    operators = []
+    taus = []
+    for index in indices:
+        operator = sequence.operator_pool.get(sequence.get_operator_index(index))
+        tau = sequence.get_tau(index)
+        operators.append(operator)
+        taus.append(tau)
+    return operators, taus
+
+
+def to_pqc(sequence: Sequence, indices):
+    result = TimeEvolutionPQC(sequence.observable.nqubit)
+    for operator, tau in zip(to_time_evolutions(sequence, indices)):
+        result.add_time_evolution(operator, tau)
+    return result
 
 
 def parse(operator: FermionOperator, nqubit):

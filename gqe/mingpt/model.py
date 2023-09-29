@@ -8,7 +8,7 @@ https://github.com/openai/gpt-2/blob/master/src/model.py
 https://github.com/huggingface/transformers/blob/main/src/transformers/models/gpt2/modeling_gpt2.py
 """
 
-import math
+import math, sys
 
 import torch
 import torch.nn as nn
@@ -162,6 +162,8 @@ class GPT(nn.Module):
         ))
         self.lm_head = nn.Linear(config.n_embd, config.vocab_size, bias=False)
         self.std = config.std
+        self.min_energy = sys.maxsize
+        self.min_indices = None
 
         # init all weights, and apply a special scaled init to the residual projections, per GPT-2 paper
         self.apply(self._init_weights)
@@ -290,7 +292,9 @@ class GPT(nn.Module):
     def cost(self, idx):
         idx_output, logits_tensor = self.generate(idx, self.n_gates)
         energies = self._cost.energy(idx_output)
+
         mean_logits = torch.mean(logits_tensor, 1)
+        self.record_min(energies, idx_output)
         detail = ComputationDetail(indices=idx_output,
                                    logits=logits_tensor,
                                    energies=energies)
@@ -315,6 +319,14 @@ class GPT(nn.Module):
             idx = torch.cat((idx, idx_next), dim=1)
         idx = idx[:, condition_length:]
         return idx, torch.gather(logits_base, 2, idx.reshape(b_size, -1, 1)).reshape(b_size, -1)
+
+    def record_min(self, energies, idx_output):
+        energies = energies.cpu().numpy()
+        indices = idx_output.cpu().numpy()
+        for j, e in enumerate(energies):
+            if e < self.min_energy:
+                self.min_energy = e
+                self.min_indices = indices[j]
 
     def forward(self, idx):
         loss = self.cost(idx)

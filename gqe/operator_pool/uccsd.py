@@ -18,9 +18,16 @@ class UCCSD(ListablePool):
         p_strings = set()
         for g in u.gates:
             p_array = ["I"] * nqubit
+            y_count = 0
             for p in g.generator.paulistrings:
                 for k, v in p.items():
+                    if v == "Y":
+                        y_count += 1
                     p_array[k] = v
+                if y_count % 2 == 0:
+                    print("skipped")
+                    # only odd y_count term is added
+                    continue
                 p_string = "".join(p_array)
                 p_strings.add(p_string)
         paulis = []

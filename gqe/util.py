@@ -19,19 +19,16 @@ def get_device():
 
 
 def to_time_evolutions(sequence: Sequence, indices):
-    operators = []
-    taus = []
+    evolutions = []
     for index in indices:
-        operator = sequence.operator_pool.get(sequence.get_operator_index(index))
-        tau = sequence.get_tau(index)
-        operators.append(operator)
-        taus.append(tau)
-    return operators, taus
+        evolutions.append(sequence.pool.get(index))
+    return evolutions
 
 
 def to_pqc(sequence: Sequence, indices):
     result = TimeEvolutionPQC(sequence.observable.nqubit)
-    for operator, tau in zip(to_time_evolutions(sequence, indices)):
+    operators, taus = to_time_evolutions(sequence, indices)
+    for operator, tau in zip(operators, taus):
         result.add_time_evolution(operator, tau)
     return result
 

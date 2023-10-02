@@ -15,6 +15,7 @@ class PrintMonitor(Monitor):
         print("mean_logits", torch.mean(detail.logits, 1) - model.energy_offset)
         print("energies:", detail.energies)
         print("mean:", torch.mean(detail.energies))
+        print("current min:", model.min_energy)
 
 
 class FileMonitor(Monitor):

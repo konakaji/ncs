@@ -65,4 +65,4 @@ class EnergyCost(Cost):
         return torch.tensor(energies, dtype=torch.float).to(self.device)
 
     def vocab_size(self):
-        return self.sequence.operator_pool.size() * len(self.sequence.taus)
+        return self.sequence.pool.size()

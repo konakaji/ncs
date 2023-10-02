@@ -126,6 +126,7 @@ class GPT(nn.Module):
         assert config.vocab_size is not None
         assert config.block_size is not None
         self.block_size = config.block_size
+        self.vocab_size = config.vocab_size
         self.energy_offset = torch.tensor(config.energy_offset).to(get_device())
         self._cost = cost
         self.n_gates = config.n_gates
@@ -290,13 +291,12 @@ class GPT(nn.Module):
         return logits
 
     def cost(self, idx):
-        idx_output, logits_tensor = self.generate(idx, self.n_gates)
+        idx_output, logits_tensors = self.generate(idx, self.n_gates)
         energies = self._cost.energy(idx_output)
-
-        mean_logits = torch.mean(logits_tensor, 1)
+        mean_logits = torch.mean(logits_tensors, 1)
         self.record_min(energies, idx_output)
         detail = ComputationDetail(indices=idx_output,
-                                   logits=logits_tensor,
+                                   logits=logits_tensors,
                                    energies=energies)
         loss = torch.nn.MSELoss()
         value = loss(torch.exp(-mean_logits), torch.exp(-energies - self.energy_offset))
@@ -310,15 +310,30 @@ class GPT(nn.Module):
         """
         b_size = idx.size(dim=0)
         condition_length = idx.size(dim=1)
+        # # logits_result = torch.empty(b_size, max_new_tokens)
+        # logit_result = None
         for pos in range(max_new_tokens):
             idx_cond = idx if idx.size(1) <= self.block_size else idx[:, -self.block_size:]
+            # discount = self.discount_ratio ** (max_new_tokens - pos - 1)
             logits_base = self.generate_logits(idx_cond)
             logits = logits_base[:, -1, :]
             probs = F.softmax(-self.temperature * logits, dim=-1)
             idx_next = torch.multinomial(probs, num_samples=1)
             idx = torch.cat((idx, idx_next), dim=1)
+            # t = torch.gather(logits, 1, idx_next)
+            # if logit_result is None:
+            #     logit_result = t
+            # else:
+            #     logit_result = logit_result + t / max_new_tokens
+            # # logits_result[pos] = logits[:, idx_next.item()]
+            # # if logit_result is None:
+            # #     logit_result = logits_base[:, pos:pos + 1, :]
+            # # else:
+            # #     logit_result = torch.cat((logit_result, logits_base[:, pos:pos + 1, :]), dim=1)
         idx = idx[:, condition_length:]
-        return idx, torch.gather(logits_base, 2, idx.reshape(b_size, -1, 1)).reshape(b_size, -1)
+        r1 = torch.gather(logits_base, 2, idx.reshape(b_size, -1, 1)).reshape(b_size, -1)
+        # r2 = torch.gather(logits_result, 2, idx.reshape(b_size, -1, 1)).reshape(b_size, -1)
+        return idx, r1
 
     def record_min(self, energies, idx_output):
         energies = energies.cpu().numpy()

@@ -53,10 +53,12 @@ class LayerWiseFineTuneTrainer:
             if layer_index in self.monitors:
                 trainer.set_callback("on_batch_end", DefaultCallback(gpt, self.monitors[layer_index]).generate())
             trainer.run()
-            operators, taus = to_time_evolutions(cost.sequence, gpt.min_indices)
-            for operator, tau in zip(operators, taus):
-                self.pqc.add_time_evolution(operator, tau)
+            evolutions = to_time_evolutions(cost.sequence, gpt.min_indices)
+            for evolution in evolutions:
+                self.pqc.add_time_evolution(evolution.pauli, evolution.t)
+            print(self.pqc.thetas)
             self.vqe.exec()
+            print(self.pqc.thetas)
             self.vqe.optimizer = AdamOptimizer(maxiter=self.vqe.optimizer._maxiter)
             self.pqc.thetas = self.pqc.thetas.tolist()
             self.histories.append(gpt)
@@ -79,8 +81,6 @@ class LayerWiseTrainer:
         current_prefixes = None
         cost = self.cost
         for layer_index in range(self.num_layers):
-            if current_prefixes is not None:
-                cost = cost.copy_with(current_prefixes)
             print(f"layer: {layer_index + 1} starts running")
             gpt = GPT(self.factory.generate_model_config(layer_index), cost)
             gpt = gpt.to(self.device)

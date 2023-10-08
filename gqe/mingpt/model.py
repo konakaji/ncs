@@ -125,6 +125,7 @@ class GPT(nn.Module):
         super().__init__()
         assert config.vocab_size is not None
         assert config.block_size is not None
+        assert config.n_gates is not None
         self.block_size = config.block_size
         self.vocab_size = config.vocab_size
         self.energy_offset = torch.tensor(config.energy_offset).to(get_device())
@@ -290,9 +291,14 @@ class GPT(nn.Module):
         logits = self.lm_head(x)
         return logits
 
-    def cost(self, idx):
-        idx_output, logits_tensors = self.generate(idx, self.n_gates)
-        energies = self._cost.energy(idx_output)
+    def cost(self, idx, energies=None):
+        if energies is None:
+            idx_output, logits_base = self.generate(idx, self.n_gates)
+            energies = self._cost.energy(idx_output)
+        else:
+            idx_output = idx[:, 1:]
+            logits_base = self.generate_logits(idx[:, :self.block_size])
+        logits_tensors = self.gather(idx_output, logits_base)
         mean_logits = torch.mean(logits_tensors, 1)
         self.record_min(energies, idx_output)
         detail = ComputationDetail(indices=idx_output,
@@ -302,13 +308,16 @@ class GPT(nn.Module):
         value = loss(torch.exp(-mean_logits), torch.exp(-energies - self.energy_offset))
         return value, detail
 
+    def gather(self, idx, logits_base):
+        b_size = idx.size(dim=0)
+        return torch.gather(logits_base, 2, idx.reshape(b_size, -1, 1)).reshape(b_size, -1)
+
     def generate(self, idx, max_new_tokens):
         """
         Take a conditioning sequence of indices idx (LongTensor of shape (b,t)) and complete
         the sequence max_new_tokens times, feeding the predictions back into the model each time.
         Most likely you'll want to make sure to be in model.eval() mode of operation for this.
         """
-        b_size = idx.size(dim=0)
         condition_length = idx.size(dim=1)
         # # logits_result = torch.empty(b_size, max_new_tokens)
         # logit_result = None
@@ -331,9 +340,8 @@ class GPT(nn.Module):
             # # else:
             # #     logit_result = torch.cat((logit_result, logits_base[:, pos:pos + 1, :]), dim=1)
         idx = idx[:, condition_length:]
-        r1 = torch.gather(logits_base, 2, idx.reshape(b_size, -1, 1)).reshape(b_size, -1)
         # r2 = torch.gather(logits_result, 2, idx.reshape(b_size, -1, 1)).reshape(b_size, -1)
-        return idx, r1
+        return idx, logits_base
 
     def record_min(self, energies, idx_output):
         energies = energies.cpu().numpy()
@@ -343,8 +351,8 @@ class GPT(nn.Module):
                 self.min_energy = e
                 self.min_indices = indices[j]
 
-    def forward(self, idx):
-        loss = self.cost(idx)
+    def forward(self, idx, energies=None):
+        loss = self.cost(idx, energies)
         return loss
 
 

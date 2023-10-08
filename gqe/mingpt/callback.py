@@ -1,4 +1,5 @@
 from abc import abstractmethod
+from gqe.mingpt.data import TrajectoryData
 import torch, json, sys
 
 
@@ -6,6 +7,14 @@ class Monitor:
     @abstractmethod
     def record(self, model, trainer, detail):
         pass
+
+
+class PretrainMonitor(Monitor):
+    def record(self, model, trainer, detail):
+        print(
+            f"iter_dt {trainer.iter_dt:.2f}s; iter {trainer.iter_num}: "
+            f"batch {trainer.batch_num}/{trainer.batch_count} "
+            f"train loss {trainer.loss.item():.5f} temperature: {model.temperature}")
 
 
 class PrintMonitor(Monitor):
@@ -27,13 +36,8 @@ class FileMonitor(Monitor):
     def record(self, model, trainer, detail):
         energies = detail.energies.cpu().numpy().tolist()
         indices = detail.indices.cpu().numpy().tolist()
-        line = {
-            "iter": trainer.iter_num,
-            "loss": trainer.loss.item(),
-            "indices": indices,
-            "energies": energies
-        }
-        self.lines.append(line)
+        data = TrajectoryData(trainer.iter_num, trainer.loss.item(), indices, energies)
+        self.lines.append(data.to_json())
         for j, e in enumerate(energies):
             if e < self.min_energy:
                 self.min_energy = e
@@ -42,7 +46,7 @@ class FileMonitor(Monitor):
     def save(self, path):
         with open(path, 'w') as f:
             for l in self.lines:
-                f.write(f"{json.dumps(l)}\n")
+                f.write(f"{l}\n")
 
 
 class DefaultCallback:

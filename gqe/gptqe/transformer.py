@@ -1,24 +1,25 @@
 import torch
-from torch import nn
 from torch.nn import functional as F
 from transformers import GPT2LMHeadModel, GPT2Config
 from lightning import LightningModule
+from gqe.util import get_device
+
 
 class Transformer(LightningModule):
     def __init__(self, cfg, distance):
         super().__init__()
         self._distance = distance
         self.cfg = cfg
-        gpt2cfg = GPT2Config(**{ k: cfg[k] for k in GPT2Config().to_dict().keys() & cfg.keys() })
-        self.transformer = GPT2LMHeadModel(gpt2cfg)
+        gpt2cfg = GPT2Config(**{k: cfg[k] for k in GPT2Config().to_dict().keys() & cfg.keys()})
+        self.transformer = GPT2LMHeadModel(gpt2cfg).to(get_device())
         self.ngates = cfg.ngates
         self.energy_scaling = cfg.energy_scaling
         self.num_samples = cfg.num_samples
         self.temperature = cfg.temperature
         self.save_hyperparameters()
-        self._starting_idx = torch.zeros(cfg.num_samples, 1, dtype=torch.int)
+        self._starting_idx = torch.zeros(cfg.num_samples, 1, dtype=torch.int, device=get_device())
         self.loss_fn = torch.nn.MSELoss()
-    
+
     def generate_logits(self, idx):
         # device = idx.device
         # b, t = idx.size()
@@ -27,7 +28,7 @@ class Transformer(LightningModule):
         # forward the GPT model itself
         logits = self.transformer(idx)[0]
         return logits
-    
+
     def set_cost(self, cost):
         self._cost = cost
 
@@ -41,7 +42,7 @@ class Transformer(LightningModule):
         log_values[f"mean energy at {self._distance}"] = torch.mean(energies)
         loss = self.loss_fn(torch.exp(-mean_logits), torch.exp(-energies / self.energy_scaling))
         log_values[f"loss at {self._distance}"] = loss
-        return loss, log_values
+        return loss, energies, idx_output, log_values
         # return loss(mean_logits, energies)
 
     def generate(self, idx=None):
@@ -52,7 +53,7 @@ class Transformer(LightningModule):
         """
         if idx is None:
             idx = self._starting_idx.clone()
-        assert isinstance(idx, torch.IntTensor)
+        # assert isinstance(idx, torch.IntTensor)
         b_size = idx.shape[0]
         condition_length = idx.size(dim=1)
         # logits_tensor = torch.empty((max_new_tokens, b_size))

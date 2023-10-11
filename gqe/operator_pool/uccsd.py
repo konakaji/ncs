@@ -25,7 +25,6 @@ class UCCSD(ListablePool):
                         y_count += 1
                     p_array[k] = v
                 if y_count % 2 == 0:
-                    print("skipped")
                     # only odd y_count term is added
                     continue
                 p_string = "".join(p_array)

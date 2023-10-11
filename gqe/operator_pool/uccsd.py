@@ -18,9 +18,16 @@ class UCCSD(ListablePool):
         p_strings = set()
         for g in u.gates:
             p_array = ["I"] * nqubit
+            y_count = 0
             for p in g.generator.paulistrings:
                 for k, v in p.items():
+                    if v == "Y":
+                        y_count += 1
                     p_array[k] = v
+                if y_count % 2 == 0:
+                    print("skipped")
+                    # only odd y_count term is added
+                    continue
                 p_string = "".join(p_array)
                 p_strings.add(p_string)
         paulis = []
@@ -39,6 +46,17 @@ class UCCSD(ListablePool):
 def generate_molecule(atom1type, atom2type, bond_length, basis_set, active_orbitals=None, bravyi_kitaev=True):
     geometry = (f"{atom1type} 0.0 0.0 0.0\n" +
                 f"{atom2type} 0.0 0.0 {bond_length}")
+    transformation = "jordan-wigner"
+    if bravyi_kitaev:
+        transformation = "bravyi-kitaev"
+    if active_orbitals is not None:
+        return tq.chemistry.Molecule(geometry=geometry,
+                                     basis_set=basis_set,
+                                     active_orbitals=active_orbitals, transformation=transformation)
+    return tq.chemistry.Molecule(geometry=geometry, basis_set=basis_set)
+
+
+def do_generate_molecule(geometry, basis_set, active_orbitals=None, bravyi_kitaev=True):
     transformation = "jordan-wigner"
     if bravyi_kitaev:
         transformation = "bravyi-kitaev"

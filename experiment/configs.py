@@ -1,6 +1,25 @@
 from ml_collections import ConfigDict
 
 
+def get_default_pretrain_configs():
+    cfg = ConfigDict()
+    cfg.name = "gptqe"
+    cfg.temperature = 0
+    cfg.grad_norm_clip = 1.0
+    cfg.nqubit = 4
+    cfg.ngates = 20
+    cfg.seed = 3047
+    cfg.lr = 5e-7
+    cfg.energy_offset = 0.0
+    cfg.resid_pdrop = 0.0
+    cfg.embd_pdrop = 0.0
+    cfg.attn_pdrop = 0.0
+    cfg.max_iters = 5
+    cfg.check_points = {}
+    cfg.verbose = False
+    return cfg
+
+
 def get_default_configs():
     cfg = ConfigDict()
     cfg.verbose = False

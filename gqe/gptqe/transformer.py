@@ -6,9 +6,9 @@ from gqe.util import get_device
 
 
 class Transformer(LightningModule):
-    def __init__(self, cfg, distance):
+    def __init__(self, cfg, label):
         super().__init__()
-        self._distance = distance
+        self._label = label
         self.cfg = cfg
         gpt2cfg = GPT2Config(**{k: cfg[k] for k in GPT2Config().to_dict().keys() & cfg.keys()})
         self.transformer = GPT2LMHeadModel(gpt2cfg).to(get_device())
@@ -27,15 +27,25 @@ class Transformer(LightningModule):
     def set_cost(self, cost):
         self._cost = cost
 
-    def train_step(self):
+    def gather(self, idx, logits_base):
+        b_size = idx.shape[0]
+        return torch.gather(logits_base, 2, idx.reshape(b_size, -1, 1)).reshape(b_size, -1)
+
+    def train_step(self, indices=None, energies=None):
         log_values = {}
-        idx_output, logits_tensor = self.generate()
-        energies = self._cost.energy(idx_output)
+        if energies is not None:
+            assert indices is not None
+            idx_output = indices[:, 1:]
+            logits_base = self.generate_logits(idx_output)
+        else:
+            idx_output, logits_base = self.generate()
+            energies = self._cost.energy(idx_output)
+        logits_tensor = self.gather(idx_output, logits_base)
         mean_logits = torch.mean(logits_tensor, 1)
-        log_values[f"mean_logits at {self._distance}"] = torch.mean(mean_logits - self.energy_offset)
-        log_values[f"mean energy at {self._distance}"] = torch.mean(energies)
+        log_values[f"mean_logits at {self._label}"] = torch.mean(mean_logits - self.energy_offset)
+        log_values[f"mean energy at {self._label}"] = torch.mean(energies)
         loss = self.loss_fn(torch.exp(-mean_logits), torch.exp(-energies - self.energy_offset))
-        log_values[f"loss at {self._distance}"] = loss
+        log_values[f"loss at {self._label}"] = loss
         return loss, energies, idx_output, log_values
 
     def generate(self, idx=None):
@@ -46,7 +56,6 @@ class Transformer(LightningModule):
         """
         if idx is None:
             idx = self._starting_idx.clone()
-        b_size = idx.shape[0]
         condition_length = idx.size(dim=1)
         for _ in range(self.ngates):
             idx_cond = idx
@@ -56,7 +65,7 @@ class Transformer(LightningModule):
             idx_next = torch.multinomial(probs, num_samples=1)
             idx = torch.cat((idx, idx_next), dim=1)
         idx = idx[:, condition_length:]
-        return idx, torch.gather(logits_base, 2, idx.reshape(b_size, -1, 1)).reshape(b_size, -1)
+        return idx, logits_base
 
     def forward(self):
         pass

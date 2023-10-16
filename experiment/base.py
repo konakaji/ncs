@@ -14,6 +14,7 @@ from gqe.common.initializer import HFStateInitializer
 from qswift.compiler import DefaultOperatorPool
 from gqe.mingpt.cost import EnergyCost
 from gqe.gptqe.monitor import FileMonitor
+from gqe.util import get_device
 from datetime import datetime
 
 
@@ -22,6 +23,46 @@ def key(distance):
 
 
 class GPTQEBase(ABC):
+    def pretrain(self, cfg, data_loader):
+        cfg.run_name = datetime.now().strftime("run_%m%d_%H_%M")
+        cfg.save_dir = f"checkpoints/{cfg.name}/{cfg.run_name}/"
+        logger = WandbLogger(
+            project=cfg.name,
+            name=cfg.run_name,
+            log_model=True,
+        )
+        fabric = L.Fabric(accelerator="auto", loggers=[logger])
+        fabric.seed_everything(cfg.seed)
+        fabric.launch()
+        model = Transformer(cfg, 'pretrain')
+        optimizer = torch.optim.AdamW(model.parameters(), lr=cfg.lr)
+        model, optimizer = fabric.setup(model, optimizer)
+        if 'pretrain' in cfg.check_points:
+            print("loaded from the checkpoint")
+            cp = fabric.load(cfg.check_points['pretrain'])
+            model.load_state_dict(cp["model"])
+            optimizer.load_state_dict(cp["optimizer"])
+        pytorch_total_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
+        print(f"total trainable params: {pytorch_total_params / 1e6:.2f}M")
+        model.train()
+        size = len(data_loader)
+        for iter in range(cfg.max_iters):
+            current = 0
+            for input, energies in data_loader:
+                optimizer.zero_grad()
+                loss, energies, indices, log_values = model.train_step(indices=input.to(get_device()),
+                                                                       energies=energies.to(get_device()))
+                if cfg.verbose:
+                    print(f"{loss.item()} at {current}/{size} ({iter}/{cfg.max_iters})")
+                fabric.log_dict(log_values, step=current + size * iter)
+                fabric.backward(loss)
+                fabric.clip_gradients(model, optimizer, max_norm=cfg.grad_norm_clip)
+                optimizer.step()
+                current += 1
+        model.set_cost(None)
+        state = {"model": model, "optimizer": optimizer, "hparams": model.hparams}
+        fabric.save(cfg.save_dir + f"checkpoint_pretrain.ckpt", state)
+
     def run(self, cfg):
         cfg.run_name = datetime.now().strftime("run_%m%d_%H_%M")
         cfg.save_dir = f"checkpoints/{cfg.name}/{cfg.run_name}/"

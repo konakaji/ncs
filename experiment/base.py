@@ -4,7 +4,7 @@ import torch
 import lightning as L
 import wandb
 import matplotlib.pyplot as p
-from lightning_gptqe.models.transformer import Transformer
+from gqe.gptqe.transformer import Transformer
 from pytorch_lightning.loggers import WandbLogger
 from abc import ABC, abstractmethod
 from gqe.operator_pool.uccsd import UCCSD
@@ -56,8 +56,8 @@ class GPTQEBase(ABC):
                 log_values[f"min_energy at {distance}"] = min_energy
                 log_values[f"temperature at {distance}"] = model.temperature
                 if cfg.verbose:
-                    print(energies)
-                    print(model.temperature)
+                    print(f"energies: {energies}")
+                    print(f"temperature: {model.temperature}")
                 fabric.log_dict(log_values)
                 fabric.backward(loss)
                 fabric.clip_gradients(model, optimizer, max_norm=cfg.grad_norm_clip)
@@ -68,7 +68,6 @@ class GPTQEBase(ABC):
             state = {"model": model, "optimizer": optimizer, "hparams": model.hparams}
             fabric.save(cfg.save_dir + f"checkpoint_{distance}.ckpt", state)
             min_indices_dict[distance] = min_indices.cpu().numpy().tolist()
-            # computed_energies.append(find_computed_energy(cost, model))
             computed_energies.append(min_energy)
 
         plt, impath = self.plot_figure(cfg, computed_energies)

@@ -17,6 +17,10 @@ from gqe.gptqe.monitor import FileMonitor
 from datetime import datetime
 
 
+def key(distance):
+    return str(distance).replace(".", "")
+
+
 class GPTQEBase(ABC):
     def run(self, cfg):
         cfg.run_name = datetime.now().strftime("run_%m%d_%H_%M")
@@ -41,6 +45,11 @@ class GPTQEBase(ABC):
             model.set_cost(cost)
             optimizer = torch.optim.AdamW(model.parameters(), lr=cfg.lr)
             model, optimizer = fabric.setup(model, optimizer)
+            if key(distance) in cfg.check_points:
+                print("loaded from the checkpoint")
+                cp = fabric.load(cfg.check_points[key(distance)])
+                model.load_state_dict(cp["model"])
+                optimizer.load_state_dict(cp["optimizer"])
             pytorch_total_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
             print(f"total trainable params: {pytorch_total_params / 1e6:.2f}M")
             model.train()
@@ -60,7 +69,7 @@ class GPTQEBase(ABC):
                 if cfg.verbose:
                     print(f"energies: {energies}")
                     print(f"temperature: {model.temperature}")
-                fabric.log_dict(log_values)
+                fabric.log_dict(log_values, step=epoch)
                 fabric.backward(loss)
                 fabric.clip_gradients(model, optimizer, max_norm=cfg.grad_norm_clip)
                 optimizer.step()

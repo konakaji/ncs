@@ -23,4 +23,5 @@ def get_default_configs():
     cfg.resid_pdrop = 0.0
     cfg.embd_pdrop = 0.0
     cfg.attn_pdrop = 0.0
+    cfg.check_points = {}
     return cfg

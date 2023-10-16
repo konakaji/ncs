@@ -13,6 +13,7 @@ from qwrapper.obs import PauliObservable
 from gqe.common.initializer import HFStateInitializer
 from qswift.compiler import DefaultOperatorPool
 from gqe.mingpt.cost import EnergyCost
+from gqe.gptqe.monitor import FileMonitor
 from datetime import datetime
 
 
@@ -33,6 +34,7 @@ class GPTQEBase(ABC):
         min_indices_dict = {}
         distances = cfg.distances
         for distance in distances:
+            monitor = FileMonitor()
             cost = self.construct_cost(distance, cfg)
             cfg.vocab_size = cost.vocab_size()
             model = Transformer(cfg, distance)
@@ -47,6 +49,7 @@ class GPTQEBase(ABC):
             for epoch in range(cfg.max_iters):
                 optimizer.zero_grad()
                 loss, energies, indices, log_values = model.train_step()
+                monitor.record(epoch, loss, energies, indices)
                 for e, indices in zip(energies, indices):
                     energy = e.item()
                     if energy < min_energy:
@@ -66,6 +69,7 @@ class GPTQEBase(ABC):
             model.set_cost(None)
             state = {"model": model, "optimizer": optimizer, "hparams": model.hparams}
             fabric.save(cfg.save_dir + f"checkpoint_{distance}.ckpt", state)
+            monitor.save(cfg.save_dir + f"trajectory_{distance}.ckpt")
             min_indices_dict[distance] = min_indices.cpu().numpy().tolist()
             computed_energies.append(min_energy)
 

@@ -32,7 +32,7 @@ class Transformer(LightningModule):
         idx_output, logits_tensor = self.generate()
         energies = self._cost.energy(idx_output)
         mean_logits = torch.mean(logits_tensor, 1)
-        log_values[f"mean_logits at {self._distance}"] = torch.mean(mean_logits + self.energy_offset)
+        log_values[f"mean_logits at {self._distance}"] = torch.mean(mean_logits - self.energy_offset)
         log_values[f"mean energy at {self._distance}"] = torch.mean(energies)
         loss = self.loss_fn(torch.exp(-mean_logits), torch.exp(-energies - self.energy_offset))
         log_values[f"loss at {self._distance}"] = loss

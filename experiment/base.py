@@ -20,7 +20,6 @@ class GPTQEBase(ABC):
     def run(self, cfg):
         cfg.run_name = datetime.now().strftime("run_%m%d_%H_%M")
         cfg.save_dir = f"checkpoints/{cfg.name}/{cfg.run_name}/"
-        cfg.verbose = True
         logger = WandbLogger(
             project=cfg.name,
             name=cfg.run_name,

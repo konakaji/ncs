@@ -16,6 +16,7 @@ from gqe.mingpt.cost import EnergyCost
 from gqe.gptqe.monitor import FileMonitor
 from gqe.util import get_device
 from datetime import datetime
+from benchmark.molecule import DiatomicMolecularHamiltonian
 
 
 def key(distance):
@@ -98,19 +99,25 @@ class GPTQEBase(ABC):
             min_indices = None
             for epoch in range(cfg.max_iters):
                 optimizer.zero_grad()
-                loss, energies, indices, log_values = model.train_step()
-                monitor.record(epoch, loss, energies, indices)
-                for e, indices in zip(energies, indices):
-                    energy = e.item()
-                    if energy < min_energy:
-                        min_energy = e.item()
-                        min_indices = indices
-                log_values[f"min_energy at {distance}"] = min_energy
-                log_values[f"temperature at {distance}"] = model.temperature
-                if cfg.verbose:
-                    print(f"energies: {energies}")
-                    print(f"temperature: {model.temperature}")
-                fabric.log_dict(log_values, step=epoch)
+                l = None
+                for _ in range(cfg.backward_frequency):
+                    loss, energies, indices, log_values = model.train_step()
+                    if l is None:
+                        l = loss
+                    else:
+                        l = l + loss
+                    monitor.record(epoch, loss, energies, indices)
+                    for e, indices in zip(energies, indices):
+                        energy = e.item()
+                        if energy < min_energy:
+                            min_energy = e.item()
+                            min_indices = indices
+                    log_values[f"min_energy at {distance}"] = min_energy
+                    log_values[f"temperature at {distance}"] = model.temperature
+                    if cfg.verbose:
+                        print(f"energies: {energies}")
+                        print(f"temperature: {model.temperature}")
+                    fabric.log_dict(log_values, step=epoch)
                 fabric.backward(loss)
                 fabric.clip_gradients(model, optimizer, max_norm=cfg.grad_norm_clip)
                 optimizer.step()
@@ -186,9 +193,9 @@ class GPTQEBase(ABC):
         p.savefig(impath)
         return p, impath
 
-    @abstractmethod
     def get_hamiltonian(self, molecule, cfg):
-        pass
+        hamiltonian = DiatomicMolecularHamiltonian(cfg.nqubit, molecule, bravyi_kitaev=cfg.is_bravyi)
+        return hamiltonian
 
     @abstractmethod
     def get_molecule(self, distance, cfg):

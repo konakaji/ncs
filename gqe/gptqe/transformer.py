@@ -48,7 +48,7 @@ class Transformer(LightningModule):
         log_values[f"loss at {self._label}"] = loss
         return loss, energies, idx_output, log_values
 
-    def generate(self, idx=None):
+    def generate(self, idx=None, ngates=None):
         """
         Take a conditioning sequence of indices idx (LongTensor of shape (b,t)) and complete
         the sequence max_new_tokens times, feeding the predictions back into the model each time.
@@ -57,7 +57,9 @@ class Transformer(LightningModule):
         if idx is None:
             idx = self._starting_idx.clone()
         condition_length = idx.size(dim=1)
-        for _ in range(self.ngates):
+        if ngates is None:
+            ngates = self.ngates
+        for _ in range(ngates):
             idx_cond = idx
             logits_base = self.generate_logits(idx_cond)
             logits = logits_base[:, -1, :]

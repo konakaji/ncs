@@ -24,6 +24,7 @@ def get_default_configs():
     cfg = ConfigDict()
     cfg.verbose = False
     cfg.name = "gptqe"
+    cfg.backward_frequency = 1
     cfg.warmup_steps = 100
     cfg.num_samples = 5  # akin to batch size
     cfg.max_iters = 100

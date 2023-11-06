@@ -64,7 +64,7 @@ class GPTQEBase(ABC):
         state = {"model": model, "optimizer": optimizer, "hparams": model.hparams}
         fabric.save(cfg.save_dir + f"checkpoint_pretrain.ckpt", state)
 
-    def run(self, cfg):
+    def run(self, cfg,optuna=False):
         cfg.run_name = datetime.now().strftime("run_%m%d_%H_%M")
         cfg.save_dir = f"checkpoints/{cfg.name}/{cfg.run_name}/"
         logger = WandbLogger(
@@ -129,7 +129,10 @@ class GPTQEBase(ABC):
             monitor.save(cfg.save_dir + f"trajectory_{distance}.ckpt")
             min_indices_dict[distance] = min_indices.cpu().numpy().tolist()
             computed_energies.append(min_energy)
-
+        if optuna:
+            self.optuna_minima = computed_energies
+            
+            
         plt, impath = self.plot_figure(cfg, computed_energies)
         fabric.log('result', wandb.Image(plt))
         fabric.log('circuit', json.dumps(min_indices_dict))
@@ -200,3 +203,7 @@ class GPTQEBase(ABC):
     @abstractmethod
     def get_molecule(self, distance, cfg):
         pass
+    
+    def run_optuna(self, cfg):
+        self.run(cfg,optuna=True)
+        return min(self.optuna_minima)

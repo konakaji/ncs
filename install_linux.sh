@@ -1,4 +1,4 @@
-pip install -r requirements.txt
+pip install -r requirements_linux.txt
 # For tequila
 # pip uninstall jax
 # pip uninstall jaxlib

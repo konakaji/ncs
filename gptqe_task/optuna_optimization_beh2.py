@@ -9,19 +9,20 @@ def get_beh2_configs():
     cfg.ngates = 80
     cfg.max_iters = 500
     cfg.num_samples = 15
-    cfg.backward_frequency = 6
+    cfg.backward_frequency = 1
     cfg.n_electrons = 4
     cfg.energy_offset = 14
     cfg.nqubit = 12
     cfg.del_temperature = 0.1
     cfg.molecule_name = "BeH2"
+    cfg.verbose = True
     return cfg
 
 
 def gptqe_main(
         trials,
         molecule_name,
-        n_steps=50,
+        n_steps=10,
 ):
     print("Optuna will be apply to optimize the model")
     print(f" molecule_name {molecule_name}")

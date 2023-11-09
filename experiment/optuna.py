@@ -8,7 +8,7 @@ class OptunaBase:
         self.molecule_name = molecule_name
 
     def run(self, gptqe_main):
-        storage = f"sqlite:///qptqe_{self.molecule_name}.db"
+        storage = f"sqlite:///gptqe_{self.molecule_name}.db"
         study_name = f"gptqe_{self.molecule_name}"
         study = optuna.create_study(
             direction="minimize",

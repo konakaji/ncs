@@ -4,6 +4,7 @@ common/.*
 output/*
 *.pyc
 .*
+gptqe_task/*.db
 lightning_logs/*
 !.dvc
 !.dvcignore

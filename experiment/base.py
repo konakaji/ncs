@@ -1,4 +1,5 @@
 import json
+import os.path
 import sys
 import torch
 import lightning as L
@@ -11,6 +12,7 @@ from gqe.operator_pool.uccsd import UCCSD
 from qwrapper.hamiltonian import compute_ground_state
 from qwrapper.obs import PauliObservable
 from gqe.common.initializer import HFStateInitializer
+from gqe.common.util import to_hash
 from qswift.compiler import DefaultOperatorPool
 from gqe.mingpt.cost import EnergyCost
 from gqe.gptqe.monitor import FileMonitor
@@ -91,6 +93,7 @@ class GPTQEBase(ABC):
         )
 
     def _do_run(self, cfg, distance, fabric):
+        print(cfg)
         monitor = FileMonitor()
         cost = self._construct_cost(distance, cfg)
         cfg.vocab_size = cost.vocab_size()
@@ -145,7 +148,14 @@ class GPTQEBase(ABC):
         molecule = self.get_molecule(distance, cfg)
 
         hamiltonian = self._get_hamiltonian(molecule, cfg)
-        ge = compute_ground_state(hamiltonian)
+        k = '.' + to_hash(hamiltonian)
+        if os.path.exists(k):
+            with open(k) as f:
+                ge = float(f.readline())
+        else:
+            ge = compute_ground_state(hamiltonian)
+            with open(k, 'w') as f:
+                f.write(str(ge))
         print("ground state:", ge)
         initializer = HFStateInitializer(n_electrons=cfg.n_electrons)
         scf = hamiltonian.exact_value(initializer.init_circuit(cfg.nqubit, [], "qulacs"))

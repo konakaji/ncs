@@ -35,7 +35,9 @@ class GPTQEBase(ABC):
         min_indices_dict = {}
         distances = cfg.distances
         for distance in distances:
-            self._do_run(cfg, distance, fabric)
+            indices, min_energy = self._do_run(cfg, distance, fabric)
+            computed_energies.append(min_energy)
+            min_indices_dict[str(distance)] = indices
 
         plt, impath = self._plot_figure(cfg, computed_energies)
         fabric.log('result', wandb.Image(plt))

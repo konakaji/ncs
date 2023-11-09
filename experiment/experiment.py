@@ -17,3 +17,15 @@ class BeH2Experiment(GPTQEBase):
     def get_molecule(self, distance, cfg):
         geometry = f"H 0.0 0.0 0.0\n" + f"Be 0.0 0.0 {distance}\n" + f"H 0.0 0.0 {2 * distance}\n"
         return do_generate_molecule(geometry, "sto-3g", bravyi_kitaev=False)
+
+
+class N2Experiment(GPTQEBase):
+    def get_molecule(self, distance, cfg):
+        return generate_molecule("N", "N", distance, "sto-3g", active_orbitals=[4, 5, 6, 7, 8, 9],
+                                 bravyi_kitaev=False)
+
+
+class O2Experiment(GPTQEBase):
+    def get_molecule(self, distance, cfg):
+        return generate_molecule("O", "O", distance, "sto-3g", active_orbitals=[4, 5, 6, 7, 8, 9],
+                                 bravyi_kitaev=False)

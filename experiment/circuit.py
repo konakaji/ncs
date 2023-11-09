@@ -9,12 +9,12 @@ class OptimalCircuitWriter:
         self.base = base
 
     def write(self, data: EnergyDataset, cfg):
-        cost = self.base.construct_cost(1, cfg)
+        cost = self.base._construct_cost(1, cfg)
         cost.sequence.tool = "qiskit"
         cost.sequence.get_circuit(data.min_indices).qc.draw(output="mpl", plot_barriers=True)
 
     def write_in_string(self, data: EnergyDataset, cfg):
-        cost = self.base.construct_cost(1, cfg)
+        cost = self.base._construct_cost(1, cfg)
         result = []
         for index in data.min_indices:
             operator = cost.sequence.pool.get(index)

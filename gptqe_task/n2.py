@@ -17,4 +17,4 @@ def get_n2_configs():
 
 
 if __name__ == '__main__':
-    N2Experiment().run(get_n2_configs())
+    N2Experiment().train(get_n2_configs())

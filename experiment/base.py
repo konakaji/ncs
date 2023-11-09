@@ -24,15 +24,32 @@ def key(distance):
 
 
 class GPTQEBase(ABC):
+    def train(self, cfg):
+        fabric = L.Fabric(accelerator="auto", loggers=[self._get_logger(cfg)])
+        fabric.seed_everything(cfg.seed)
+        fabric.launch()
+
+        computed_energies = []
+        min_indices_dict = {}
+        distances = cfg.distances
+        for distance in distances:
+            self._do_run(cfg, distance, fabric)
+
+        plt, impath = self._plot_figure(cfg, computed_energies)
+        fabric.log('result', wandb.Image(plt))
+        fabric.log('circuit', json.dumps(min_indices_dict))
+
+    def train_single(self, cfg):
+        fabric = L.Fabric(accelerator="auto", loggers=[self._get_logger(cfg)])
+        fabric.seed_everything(cfg.seed)
+        fabric.launch()
+
+        min_indices, energy = self._do_run(cfg, cfg.distance, fabric)
+        fabric.log('circuit', json.dumps(min_indices))
+        return min_indices, energy
+
     def pretrain(self, cfg, data_loader):
-        cfg.run_name = datetime.now().strftime("run_%m%d_%H_%M")
-        cfg.save_dir = f"checkpoints/{cfg.name}/{cfg.run_name}/"
-        logger = WandbLogger(
-            project=cfg.name,
-            name=cfg.run_name,
-            log_model=True,
-        )
-        fabric = L.Fabric(accelerator="auto", loggers=[logger])
+        fabric = L.Fabric(accelerator="auto", loggers=[self._get_logger(cfg)])
         fabric.seed_everything(cfg.seed)
         fabric.launch()
         model = Transformer(cfg, 'pretrain')
@@ -64,100 +81,87 @@ class GPTQEBase(ABC):
         state = {"model": model, "optimizer": optimizer, "hparams": model.hparams}
         fabric.save(cfg.save_dir + f"checkpoint_pretrain.ckpt", state)
 
-    def run(self, cfg,optuna=False):
+    def _get_logger(self, cfg):
         cfg.run_name = datetime.now().strftime("run_%m%d_%H_%M")
         cfg.save_dir = f"checkpoints/{cfg.name}/{cfg.run_name}/"
-        logger = WandbLogger(
+        return WandbLogger(
             project=cfg.name,
             name=cfg.run_name,
             log_model=True,
         )
-        fabric = L.Fabric(accelerator="auto", loggers=[logger])
-        fabric.seed_everything(cfg.seed)
-        fabric.launch()
 
-        computed_energies = []
-        min_indices_dict = {}
-        distances = cfg.distances
-        for distance in distances:
-            monitor = FileMonitor()
-            cost = self.construct_cost(distance, cfg)
-            cfg.vocab_size = cost.vocab_size()
-            model = Transformer(cfg, distance)
-            model.set_cost(cost)
-            optimizer = torch.optim.AdamW(model.parameters(), lr=cfg.lr)
-            model, optimizer = fabric.setup(model, optimizer)
-            if key(distance) in cfg.check_points:
-                print("loaded from the checkpoint")
-                cp = fabric.load(cfg.check_points[key(distance)])
-                model.load_state_dict(cp["model"])
-                optimizer.load_state_dict(cp["optimizer"])
-            pytorch_total_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
-            print(f"total trainable params: {pytorch_total_params / 1e6:.2f}M")
-            model.train()
-            min_energy = sys.maxsize
-            min_indices = None
-            for epoch in range(cfg.max_iters):
-                optimizer.zero_grad()
-                l = None
-                for _ in range(cfg.backward_frequency):
-                    loss, energies, indices, log_values = model.train_step()
-                    if l is None:
-                        l = loss
-                    else:
-                        l = l + loss
-                    monitor.record(epoch, loss, energies, indices)
-                    for e, indices in zip(energies, indices):
-                        energy = e.item()
-                        if energy < min_energy:
-                            min_energy = e.item()
-                            min_indices = indices
-                    log_values[f"min_energy at {distance}"] = min_energy
-                    log_values[f"temperature at {distance}"] = model.temperature
-                    if cfg.verbose:
-                        print(f"energies: {energies}")
-                        print(f"temperature: {model.temperature}")
-                    fabric.log_dict(log_values, step=epoch)
-                fabric.backward(loss)
-                fabric.clip_gradients(model, optimizer, max_norm=cfg.grad_norm_clip)
-                optimizer.step()
-                # scheduler.step()
-                model.temperature += cfg.del_temperature
-            model.set_cost(None)
-            state = {"model": model, "optimizer": optimizer, "hparams": model.hparams}
-            fabric.save(cfg.save_dir + f"checkpoint_{distance}.ckpt", state)
-            monitor.save(cfg.save_dir + f"trajectory_{distance}.ckpt")
-            min_indices_dict[distance] = min_indices.cpu().numpy().tolist()
-            computed_energies.append(min_energy)
-        if optuna:
-            self.optuna_minima = computed_energies
-            
-            
-        plt, impath = self.plot_figure(cfg, computed_energies)
-        fabric.log('result', wandb.Image(plt))
-        fabric.log('circuit', json.dumps(min_indices_dict))
+    def _do_run(self, cfg, distance, fabric):
+        monitor = FileMonitor()
+        cost = self._construct_cost(distance, cfg)
+        cfg.vocab_size = cost.vocab_size()
+        model = Transformer(cfg, distance)
+        model.set_cost(cost)
+        optimizer = torch.optim.AdamW(model.parameters(), lr=cfg.lr)
+        model, optimizer = fabric.setup(model, optimizer)
+        if key(distance) in cfg.check_points:
+            print("loaded from the checkpoint")
+            cp = fabric.load(cfg.check_points[key(distance)])
+            model.load_state_dict(cp["model"])
+            optimizer.load_state_dict(cp["optimizer"])
+        pytorch_total_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
+        print(f"total trainable params: {pytorch_total_params / 1e6:.2f}M")
+        model.train()
+        min_energy = sys.maxsize
+        min_indices = None
+        for epoch in range(cfg.max_iters):
+            optimizer.zero_grad()
+            l = None
+            for _ in range(cfg.backward_frequency):
+                loss, energies, indices, log_values = model.train_step()
+                if l is None:
+                    l = loss
+                else:
+                    l = l + loss
+                monitor.record(epoch, loss, energies, indices)
+                for e, indices in zip(energies, indices):
+                    energy = e.item()
+                    if energy < min_energy:
+                        min_energy = e.item()
+                        min_indices = indices
+                log_values[f"min_energy at {distance}"] = min_energy
+                log_values[f"temperature at {distance}"] = model.temperature
+                if cfg.verbose:
+                    print(f"energies: {energies}")
+                    print(f"temperature: {model.temperature}")
+                fabric.log_dict(log_values, step=epoch)
+            fabric.backward(loss)
+            fabric.clip_gradients(model, optimizer, max_norm=cfg.grad_norm_clip)
+            optimizer.step()
+            # scheduler.step()
+            model.temperature += cfg.del_temperature
+        model.set_cost(None)
+        state = {"model": model, "optimizer": optimizer, "hparams": model.hparams}
+        fabric.save(cfg.save_dir + f"checkpoint_{distance}.ckpt", state)
+        monitor.save(cfg.save_dir + f"trajectory_{distance}.ckpt")
+        indices = min_indices.cpu().numpy().tolist()
+        return indices, min_energy
 
-    def construct_cost(self, distance, cfg):
+    def _construct_cost(self, distance, cfg):
         molecule = self.get_molecule(distance, cfg)
 
-        hamiltonian = self.get_hamiltonian(molecule, cfg)
+        hamiltonian = self._get_hamiltonian(molecule, cfg)
         ge = compute_ground_state(hamiltonian)
         print("ground state:", ge)
         initializer = HFStateInitializer(n_electrons=cfg.n_electrons)
         scf = hamiltonian.exact_value(initializer.init_circuit(cfg.nqubit, [], "qulacs"))
         print("hf state:", scf)
-        pool = self.get_operator_pool(molecule, cfg)
+        pool = self._get_operator_pool(molecule, cfg)
         cost = EnergyCost(hamiltonian, initializer, pool, cfg.time_pool)
         return cost
 
-    def get_operator_pool(self, molecule, cfg):
+    def _get_operator_pool(self, molecule, cfg):
         uccsd = UCCSD(cfg.nqubit, molecule)
         paulis = uccsd.paulis
         identity = ''.join(["I" for _ in range(cfg.nqubit)])
         paulis.append(PauliObservable(identity))
         return DefaultOperatorPool(paulis)
 
-    def plot_figure(self, cfg, computed_energies):
+    def _plot_figure(self, cfg, computed_energies):
         distances = cfg.distances
         min_d = distances[0] - 0.1
         max_d = distances[len(distances) - 1] + 0.1
@@ -170,7 +174,7 @@ class GPTQEBase(ABC):
         for j in range(n_bin):
             d = min_d + (max_d - min_d) / (n_bin - 1) * j
             molecule = self.get_molecule(d, cfg)
-            hamiltonian = self.get_hamiltonian(molecule, cfg)
+            hamiltonian = self._get_hamiltonian(molecule, cfg)
             ge = compute_ground_state(hamiltonian)
             scf = hamiltonian.exact_value(initializer.init_circuit(4, [], "qulacs"))
             xs.append(d)
@@ -196,14 +200,10 @@ class GPTQEBase(ABC):
         p.savefig(impath)
         return p, impath
 
-    def get_hamiltonian(self, molecule, cfg):
+    def _get_hamiltonian(self, molecule, cfg):
         hamiltonian = DiatomicMolecularHamiltonian(cfg.nqubit, molecule, bravyi_kitaev=cfg.is_bravyi)
         return hamiltonian
 
     @abstractmethod
     def get_molecule(self, distance, cfg):
         pass
-    
-    def run_optuna(self, cfg):
-        self.run(cfg,optuna=True)
-        return min(self.optuna_minima)

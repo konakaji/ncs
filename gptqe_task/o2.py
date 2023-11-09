@@ -17,4 +17,4 @@ def get_o2_configs():
 
 
 if __name__ == '__main__':
-    O2Experiment().run(get_o2_configs())
+    O2Experiment().train(get_o2_configs())

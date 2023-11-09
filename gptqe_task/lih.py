@@ -17,4 +17,4 @@ def get_lih_configs():
 
 
 if __name__ == '__main__':
-    LiHExperiment().run(get_lih_configs())
+    LiHExperiment().train(get_lih_configs())

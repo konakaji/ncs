@@ -14,4 +14,4 @@ def get_hydrogen_cfg():
 
 
 if __name__ == '__main__':
-    HydrogenExperiment().run(get_hydrogen_cfg())
+    HydrogenExperiment().train(get_hydrogen_cfg())

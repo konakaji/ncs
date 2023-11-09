@@ -18,4 +18,4 @@ def get_beh2_configs():
 
 
 if __name__ == '__main__':
-    BeH2Experiment().run(get_beh2_configs())
+    BeH2Experiment().train(get_beh2_configs())

@@ -115,7 +115,7 @@ class GPTQEBase(ABC):
             optimizer.zero_grad()
             l = None
             for _ in range(cfg.backward_frequency):
-                loss, energies, indices, log_values = model.train_step()
+                loss, energies, indices, log_values = model()
                 if l is None:
                     l = loss
                 else:

@@ -23,7 +23,7 @@ def gptqe_main(
     print("Optuna will be apply to optimize the model")
     print(f" molecule_name {molecule_name}")
     cfg = get_hydrogen_cfg()
-    cfg.distances = [cfg.distances[-2]]
+    cfg.distance = cfg.distances[-2]
     cfg.max_iters = n_steps
     cfg.ngates = trials.suggest_int("ngates", 10, cfg.ngates, 1)
     cfg.temperature = trials.suggest_float("temperature", cfg.temperature, 20.0, step=5.5)

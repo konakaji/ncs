@@ -70,4 +70,4 @@ class Transformer(LightningModule):
         return idx, logits_base
 
     def forward(self):
-        self.train_step()
+        return self.train_step()

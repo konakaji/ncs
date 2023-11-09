@@ -1,4 +1,4 @@
-from functools import partial
+from experiment.optuna import OptunaBase
 from experiment.experiment import LiHExperiment
 from experiment.configs import get_default_configs
 
@@ -17,7 +17,7 @@ def get_lih_configs():
     return cfg
 
 
-def qptqe_main(
+def gptqe_main(
         trials,
         molecule_name,
         n_steps=50,
@@ -42,32 +42,4 @@ def qptqe_main(
 
 if __name__ == "__main__":
     molecule_name = "LiH"
-    storage = f"sqlite:///qptqe_{molecule_name}.db"
-    study_name = f"qptqe_{molecule_name}"
-    study = optuna.create_study(
-        direction="minimize",
-        storage=storage,
-        study_name=study_name,
-        load_if_exists=True,
-    )
-    objective = partial(
-        qptqe_main, molecule_name=molecule_name
-    )
-    study.optimize(objective, n_trials=100)
-
-    pruned_trials = study.get_trials(deepcopy=False, states=[TrialState.PRUNED])
-    complete_trials = study.get_trials(deepcopy=False, states=[TrialState.COMPLETE])
-
-    print("Study statistics: ")
-    print("  Number of finished trials: ", len(study.trials))
-    print("  Number of pruned trials: ", len(pruned_trials))
-    print("  Number of complete trials: ", len(complete_trials))
-
-    print("Best trial:")
-    trial = study.best_trial
-
-    print("  Value: ", trial.value)
-
-    print("  Params: ")
-    for key, value in trial.params.items():
-        print("    {}: {}".format(key, value))
+    OptunaBase(molecule_name).run(gptqe_main)

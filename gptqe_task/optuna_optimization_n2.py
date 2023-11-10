@@ -35,7 +35,7 @@ def gptqe_main(
     cfg.attn_pdrop = trials.suggest_float("attn_pdrop", 0.0, 0.99, step=0.01)
     cfg.num_samples = trials.suggest_int("num_samples", 5, 100, 1)  # we may need to change the bondry for this one
 
-    energy = N2Experiment().train_single(cfg)
+    indices, energy = N2Experiment().train_single(cfg)
 
     return energy
 

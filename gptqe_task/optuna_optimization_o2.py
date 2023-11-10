@@ -1,6 +1,6 @@
 from experiment.configs import get_default_configs
 from experiment.optuna import OptunaBase
-from experiment.experiment import N2Experiment
+from experiment.experiment import O2Experiment
 
 
 def get_o2_configs():
@@ -35,11 +35,11 @@ def gptqe_main(
     cfg.attn_pdrop = trials.suggest_float("attn_pdrop", 0.0, 0.99, step=0.01)
     cfg.num_samples = trials.suggest_int("num_samples", 5, 100, 1)  # we may need to change the bondry for this one
 
-    min_indices, energy = N2Experiment().train_single(cfg)
+    min_indices, energy = O2Experiment().train_single(cfg)
 
     return energy
 
 
 if __name__ == "__main__":
-    molecule_name = "N2"
+    molecule_name = "O2"
     OptunaBase(molecule_name).run(gptqe_main)

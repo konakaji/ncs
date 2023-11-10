@@ -4,6 +4,13 @@ common/.*
 output/*
 *.pyc
 .*
+*.db
+*.hdf5
+checkpoints/*
+*.out
+gptqe_task/wandb/*
+wandb/*
+gptqe_task/checkpoints/*
 gptqe_task/*.db
 lightning_logs/*
 !.dvc

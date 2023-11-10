@@ -66,7 +66,7 @@ class GPTQEBase(ABC):
             optimizer.load_state_dict(cp["optimizer"])
         pytorch_total_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
         print(f"total trainable params: {pytorch_total_params / 1e6:.2f}M")
-        model.train()
+        #model.train()
         size = len(data_loader)
         for iter in range(cfg.max_iters):
             current = 0
@@ -117,7 +117,7 @@ class GPTQEBase(ABC):
             optimizer.zero_grad()
             l = None
             for _ in range(cfg.backward_frequency):
-                loss, energies, indices, log_values = model()
+                loss, energies, indices, log_values = model.train_step()
                 if l is None:
                     l = loss
                 else:
@@ -142,7 +142,7 @@ class GPTQEBase(ABC):
         model.set_cost(None)
         state = {"model": model, "optimizer": optimizer, "hparams": model.hparams}
         fabric.save(cfg.save_dir + f"checkpoint_{distance}.ckpt", state)
-        monitor.save(cfg.save_dir + f"trajectory_{distance}.ckpt")
+        #monitor.save(cfg.save_dir + f"trajectory_{distance}.ckpt")
         indices = min_indices.cpu().numpy().tolist()
         return indices, min_energy
 

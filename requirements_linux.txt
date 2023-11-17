@@ -20,4 +20,5 @@ optuna==3.4.0
 ml-collections==0.1.1
 wandb==0.16.0
 transformers==4.31.0
+#cupy-cuda11X==12.2.0
 pyscf

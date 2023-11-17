@@ -8,13 +8,14 @@ def get_o2_configs():
     cfg.ngates = 40
     cfg.max_iters = 500
     cfg.num_samples = 50
-    cfg.n_electrons = 8
+    cfg.n_electrons = 8 
     cfg.energy_offset = 147
     cfg.nqubit = 12
     cfg.del_temperature = 0.1
     cfg.molecule_name = "O2"
+    cfg.save_dir = ""
     return cfg
 
 
 if __name__ == '__main__':
-    O2Experiment().train(get_o2_configs())
+     O2Experiment().plot_figure(get_o2_configs(), [-147.4266, -147.594, -147.660, -147.685, -147.662, -147.628, -147.605])

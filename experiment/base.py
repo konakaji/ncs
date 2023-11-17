@@ -34,14 +34,45 @@ class GPTQEBase(ABC):
         computed_energies = []
         min_indices_dict = {}
         distances = cfg.distances
+        filename = f"../output/{cfg.molecule_name}_{cfg.seed}.txt"
+        included = set()
+        if os.path.exists(filename):
+            with open(filename) as f:
+                for l in f.readlines():
+                    items = l.rstrip().split('\t')
+                    if len(items) != 2:
+                        continue
+                    distance, energy = items
+                    included.add(float(distance))
+                    computed_energies.append(float(energy))
         for distance in distances:
+            if distance in included:
+                continue
+            print("distance:", distance)
             indices, min_energy = self._do_run(cfg, distance, fabric)
             computed_energies.append(min_energy)
             min_indices_dict[str(distance)] = indices
-
-        plt, impath = self._plot_figure(cfg, computed_energies)
-        fabric.log('result', wandb.Image(plt))
+        with open(filename, 'w') as f:
+            for distance, energy in zip(distances, computed_energies):
+                f.write(f"{distance}\t{energy}\n")
         fabric.log('circuit', json.dumps(min_indices_dict))
+
+    def random_benchmark(self, cfg):
+        distances = cfg.distances
+        computed_energies = []
+        for distance in distances:
+            cost = self._construct_cost(distance, cfg)
+            min = 0
+            for _ in range(cfg.max_iters):
+                sequences = torch.randint(high=cost.vocab_size(),
+                                          size=(cfg.num_samples, cfg.ngates))
+                v = torch.min(cost.energy(sequences))
+                if min > v:
+                    min = v
+            min = min.cpu()
+            print(min)
+            computed_energies.append(min)
+        # plt, impath = self._plot_figure(cfg, computed_energies)
 
     def train_single(self, cfg):
         fabric = L.Fabric(accelerator="auto", loggers=[self._get_logger(cfg)])
@@ -66,7 +97,7 @@ class GPTQEBase(ABC):
             optimizer.load_state_dict(cp["optimizer"])
         pytorch_total_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
         print(f"total trainable params: {pytorch_total_params / 1e6:.2f}M")
-        #model.train()
+        # model.train()
         size = len(data_loader)
         for iter in range(cfg.max_iters):
             current = 0
@@ -86,7 +117,8 @@ class GPTQEBase(ABC):
         fabric.save(cfg.save_dir + f"checkpoint_pretrain.ckpt", state)
 
     def _get_logger(self, cfg):
-        cfg.run_name = datetime.now().strftime("run_%m%d_%H_%M")
+        cfg.run_name = datetime.now() \
+            .strftime("{}_{}_run_%m%d_%H_%M".format(cfg.molecule_name, cfg.seed))
         cfg.save_dir = f"checkpoints/{cfg.name}/{cfg.run_name}/"
         return WandbLogger(
             project=cfg.name,
@@ -142,7 +174,7 @@ class GPTQEBase(ABC):
         model.set_cost(None)
         state = {"model": model, "optimizer": optimizer, "hparams": model.hparams}
         fabric.save(cfg.save_dir + f"checkpoint_{distance}.ckpt", state)
-        #monitor.save(cfg.save_dir + f"trajectory_{distance}.ckpt")
+        # monitor.save(cfg.save_dir + f"trajectory_{distance}.ckpt")
         indices = min_indices.cpu().numpy().tolist()
         return indices, min_energy
 
@@ -152,6 +184,7 @@ class GPTQEBase(ABC):
         hamiltonian = self._get_hamiltonian(molecule, cfg)
         k = '.' + to_hash(hamiltonian)
         if os.path.exists(k):
+            print("exist!")
             with open(k) as f:
                 ge = float(f.readline())
         else:

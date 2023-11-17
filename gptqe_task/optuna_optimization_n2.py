@@ -15,6 +15,7 @@ def get_n2_configs():
     cfg.nqubit = 12
     cfg.del_temperature = 0.1
     cfg.molecule_name = "N2"
+    cfg.dry = True
     return cfg
 
 

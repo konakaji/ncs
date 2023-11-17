@@ -39,7 +39,7 @@ class GPTQEBase(ABC):
             computed_energies.append(min_energy)
             min_indices_dict[str(distance)] = indices
 
-        plt, impath = self._plot_figure(cfg, computed_energies)
+        plt, impath = self.plot_figure(cfg, computed_energies)
         fabric.log('result', wandb.Image(plt))
         fabric.log('circuit', json.dumps(min_indices_dict))
 
@@ -98,6 +98,8 @@ class GPTQEBase(ABC):
         print(cfg)
         monitor = FileMonitor()
         cost = self._construct_cost(distance, cfg)
+        if cfg.dry:
+            return None, None
         cfg.vocab_size = cost.vocab_size()
         model = Transformer(cfg, distance)
         model.set_cost(cost)
@@ -173,22 +175,22 @@ class GPTQEBase(ABC):
         paulis.append(PauliObservable(identity))
         return DefaultOperatorPool(paulis)
 
-    def _plot_figure(self, cfg, computed_energies):
+    def plot_figure(self, cfg, computed_energies):
         distances = cfg.distances
         min_d = distances[0] - 0.1
         max_d = distances[len(distances) - 1] + 0.1
-        n_bin = 100
+        n_bin = 50
 
         xs = []
         ys = []
         ys3 = []
-        initializer = HFStateInitializer(n_electrons=2)
+        initializer = HFStateInitializer(n_electrons=cfg.n_electrons)
         for j in range(n_bin):
             d = min_d + (max_d - min_d) / (n_bin - 1) * j
             molecule = self.get_molecule(d, cfg)
             hamiltonian = self._get_hamiltonian(molecule, cfg)
             ge = compute_ground_state(hamiltonian)
-            scf = hamiltonian.exact_value(initializer.init_circuit(4, [], "qulacs"))
+            scf = hamiltonian.exact_value(initializer.init_circuit(cfg.nqubit, [], "qulacs"))
             xs.append(d)
             ys.append(ge)
             ys3.append(scf)

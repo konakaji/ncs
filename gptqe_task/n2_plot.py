@@ -5,7 +5,7 @@ from datetime import datetime
 def get_n2_configs():
     cfg = get_default_configs()
     cfg.distances = [0.9, 1.0, 1.1, 1.2, 1.5, 1.8]
-    cfg.ngates = 60
+    cfg.ngates = 40
     cfg.max_iters = 500
     cfg.num_samples = 50
     cfg.n_electrons = 6 

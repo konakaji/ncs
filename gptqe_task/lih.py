@@ -19,6 +19,10 @@ def get_lih_configs():
 
 if __name__ == '__main__':
     cfg = get_lih_configs()
+<<<<<<< HEAD
     for seed in [0, 1, 2]:
+=======
+    for seed in [0, 1, 2, 3, 4]:
+>>>>>>> 38fcf89c4718309feaa8f6e7ee748ac5030c4d2b
         cfg.seed = seed
         LiHExperiment().train(cfg)

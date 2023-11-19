@@ -7,8 +7,8 @@ def get_beh2_configs():
     cfg.distances = [1.0, 1.15, 1.3, 1.45, 1.6, 1.75, 1.9, 2.05, 2.2, 2.35, 2.5] 
     cfg.ngates = 40
     cfg.max_iters = 500
-    cfg.num_samples = 25 
-    cfg.backward_frequency = 2 
+    cfg.num_samples = 50 
+    cfg.backward_frequency = 1
     cfg.n_electrons = 4
     cfg.energy_offset = 14
     cfg.nqubit = 12

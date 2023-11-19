@@ -36,6 +36,7 @@ class GPTQEBase(ABC):
         distances = cfg.distances
         filename = f"../output/{cfg.molecule_name}_{cfg.seed}.txt"
         included = set()
+        m = {}
         if os.path.exists(filename):
             with open(filename) as f:
                 for l in f.readlines():
@@ -43,26 +44,37 @@ class GPTQEBase(ABC):
                     if len(items) != 2:
                         continue
                     distance, energy = items
-                    included.add(float(distance))
-                    computed_energies.append(float(energy))
-        for distance in distances:
-            if distance in included:
-                continue
-            print("distance:", distance)
-            indices, min_energy = self._do_run(cfg, distance, fabric)
-            computed_energies.append(min_energy)
-            min_indices_dict[str(distance)] = indices
+                    distance = float(distance)
+                    energy = float(energy)
+                    m[distance] = energy
         with open(filename, 'w') as f:
-            for distance, energy in zip(distances, computed_energies):
-                f.write(f"{distance}\t{energy}\n")
+            for distance in distances:
+                print("distance:", distance)
+                if distance in m:
+                    min_energy = m[distance]
+                    print("already computed, skipped", distance)
+                else:
+                    indices, min_energy = self._do_run(cfg, distance, fabric)
+                    min_indices_dict[str(distance)] = indices
+                f.write(f"{distance}\t{min_energy}\n")
         # plt, impath = self.plot_figure(cfg, computed_energies)
         # fabric.log('result', wandb.Image(plt))
         fabric.log('circuit', json.dumps(min_indices_dict))
 
     def random_benchmark(self, cfg):
+        filename = f'../output/{cfg.molecule_name}_random.txt'
+        m = {}
+        if os.path.exists(filename):
+            with open(filename) as f:
+                for l in f.readlines():
+                    dist, v = l.rstrip().split("\t")
+                    m[float(dist)] = float(v)
         distances = cfg.distances
         computed_energies = []
         for distance in distances:
+            if distance in m:
+                computed_energies.append(m[distance])
+                continue
             cost = self._construct_cost(distance, cfg)
             min = 0
             for _ in range(cfg.max_iters):
@@ -72,9 +84,11 @@ class GPTQEBase(ABC):
                 if min > v:
                     min = v
             min = min.cpu()
-            print(min)
             computed_energies.append(min)
-        # plt, impath = self._plot_figure(cfg, computed_energies)
+        with open(filename, 'w') as f:
+            for dist, energy in zip(distances, computed_energies):
+                f.write(f"{dist}\t{energy}\n")
+        return computed_energies
 
     def train_single(self, cfg):
         fabric = L.Fabric(accelerator="auto", loggers=[self._get_logger(cfg)])
@@ -146,7 +160,7 @@ class GPTQEBase(ABC):
             optimizer.load_state_dict(cp["optimizer"])
         pytorch_total_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
         print(f"total trainable params: {pytorch_total_params / 1e6:.2f}M")
-        model.train()
+        #model.train()
         min_energy = sys.maxsize
         min_indices = None
         for epoch in range(cfg.max_iters):
@@ -176,8 +190,8 @@ class GPTQEBase(ABC):
             # scheduler.step()
             model.temperature += cfg.del_temperature
         model.set_cost(None)
-        state = {"model": model, "optimizer": optimizer, "hparams": model.hparams}
-        fabric.save(cfg.save_dir + f"checkpoint_{distance}.ckpt", state)
+        # state = {"model": model, "optimizer": optimizer, "hparams": model.hparams}
+        # fabric.save(cfg.save_dir + f"checkpoint_{distance}.ckpt", state)
         # monitor.save(cfg.save_dir + f"trajectory_{distance}.ckpt")
         indices = min_indices.cpu().numpy().tolist()
         return indices, min_energy
@@ -211,6 +225,8 @@ class GPTQEBase(ABC):
         return DefaultOperatorPool(paulis)
 
     def plot_figure(self, cfg, computed_energies):
+        fabric = L.Fabric(accelerator="auto", loggers=[self._get_logger(cfg)])
+        fabric.launch()
         distances = cfg.distances
         min_d = distances[0] - 0.1
         max_d = distances[len(distances) - 1] + 0.1
@@ -220,34 +236,44 @@ class GPTQEBase(ABC):
         ys = []
         ys3 = []
         initializer = HFStateInitializer(n_electrons=cfg.n_electrons)
-        for j in range(n_bin):
-            d = min_d + (max_d - min_d) / (n_bin - 1) * j
-            molecule = self.get_molecule(d, cfg)
-            hamiltonian = self._get_hamiltonian(molecule, cfg)
-            ge = compute_ground_state(hamiltonian)
-            scf = hamiltonian.exact_value(initializer.init_circuit(cfg.nqubit, [], "qulacs"))
-            xs.append(d)
-            ys.append(ge)
-            ys3.append(scf)
+        gs_file = f"../output/gs_{cfg.molecule_name}.txt"
+        if not os.path.exists(gs_file):
+            with open(gs_file, "w") as f:
+                for j in range(n_bin):
+                    d = min_d + (max_d - min_d) / (n_bin - 1) * j
+                    molecule = self.get_molecule(d, cfg)
+                    hamiltonian = self._get_hamiltonian(molecule, cfg)
+                    ge = compute_ground_state(hamiltonian)
+                    scf = hamiltonian.exact_value(initializer.init_circuit(cfg.nqubit, [], "qulacs"))
+                    f.write(f"{d}\t{ge}\t{scf}\n")
+        with open(gs_file) as f:
+            for l in f.readlines():
+                d, ge, scf = l.rstrip().split("\t")
+                xs.append(float(d))
+                ys.append(float(ge))
+                ys3.append(float(scf))
 
         xs2 = []
         ys2 = []
+        
+        randoms = self.random_benchmark(cfg)
 
         for i, d in enumerate(distances):
             xs2.append(d)
             ys2.append(computed_energies[i])
 
         # p.grid('-')
-        p.plot(xs, ys, label='exact', linewidth=1, color='blue')
-        p.plot(xs2, ys2, label='computed', marker='x', linewidth=0, color='green')
-        p.plot(xs, ys3, label='hf', linewidth=1, color='gray')
+        p.plot(xs, ys, label='exact', linewidth=2, color='blue')
+        p.plot(xs2, ys2, label='gpt-qe', marker='x', linewidth=0, color='green')
+        p.plot(xs, ys3, label='hf', linewidth=2, color='gray')
+        p.plot(xs2, randoms, label='random', marker='.', linewidth=0, color='orange')
         p.xlabel('bond length (angstrom)')
         p.ylabel('energy value (Hartree)')
-        p.title(f'GPT-QE result with {cfg.molecule_name} Hamiltonian (sto-3g basis)')
+        p.title(f'GPT-QE with {cfg.molecule_name} (sto-3g basis, {cfg.nqubit} qubits, {cfg.ngates} tokens)')
         p.legend()
-        impath = cfg.save_dir + "result.png"
+        impath = f"../output/result-{cfg.molecule_name}.png"
         p.savefig(impath)
-        return p, impath
+        fabric.log('result', wandb.Image(p))
 
     def _get_hamiltonian(self, molecule, cfg):
         hamiltonian = DiatomicMolecularHamiltonian(cfg.nqubit, molecule, bravyi_kitaev=cfg.is_bravyi)

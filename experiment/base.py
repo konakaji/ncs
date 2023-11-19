@@ -45,16 +45,15 @@ class GPTQEBase(ABC):
                     distance, energy = items
                     included.add(float(distance))
                     computed_energies.append(float(energy))
-        for distance in distances:
-            if distance in included:
-                continue
-            print("distance:", distance)
-            indices, min_energy = self._do_run(cfg, distance, fabric)
-            computed_energies.append(min_energy)
-            min_indices_dict[str(distance)] = indices
         with open(filename, 'w') as f:
-            for distance, energy in zip(distances, computed_energies):
-                f.write(f"{distance}\t{energy}\n")
+            for distance in distances:
+                if distance in included:
+                    continue
+                print("distance:", distance)
+                indices, min_energy = self._do_run(cfg, distance, fabric)
+                computed_energies.append(min_energy)
+                min_indices_dict[str(distance)] = indices
+                f.write(f"{distance}\t{min_energy}\n")
         # plt, impath = self.plot_figure(cfg, computed_energies)
         # fabric.log('result', wandb.Image(plt))
         fabric.log('circuit', json.dumps(min_indices_dict))
@@ -135,7 +134,7 @@ class GPTQEBase(ABC):
         if cfg.dry:
             return None, None
         cfg.vocab_size = cost.vocab_size()
-        model = Transformer(cfg, distance)
+        model = Transformer(cfg, distance, cfg.small)
         model.set_cost(cost)
         optimizer = torch.optim.AdamW(model.parameters(), lr=cfg.lr)
         model, optimizer = fabric.setup(model, optimizer)

@@ -45,4 +45,5 @@ def get_default_configs():
     cfg.attn_pdrop = 0.0
     cfg.check_points = {}
     cfg.dry = False
+    cfg.small = False
     return cfg

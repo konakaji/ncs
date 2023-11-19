@@ -5,12 +5,20 @@ from lightning import LightningModule
 from gqe.util import get_device
 
 
+class SmallConfig(GPT2Config):
+
+    def __init__(self, **kwargs):
+        super().__init__(n_layer=6, n_head=6, **kwargs)
+
+
 class Transformer(LightningModule):
-    def __init__(self, cfg, label):
+    def __init__(self, cfg, label, small=False):
         super().__init__()
         self._label = label
         self.cfg = cfg
         gpt2cfg = GPT2Config(**{k: cfg[k] for k in GPT2Config().to_dict().keys() & cfg.keys()})
+        if small:
+            gpt2cfg = SmallConfig(**{k: cfg[k] for k in GPT2Config().to_dict().keys() & cfg.keys()})
         self.transformer = GPT2LMHeadModel(gpt2cfg).to(get_device())
         self.ngates = cfg.ngates
         self.energy_offset = cfg.energy_offset

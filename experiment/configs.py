@@ -23,6 +23,7 @@ def get_default_pretrain_configs():
 def get_default_configs():
     cfg = ConfigDict()
     cfg.verbose = False
+    cfg.save_data = False
     cfg.name = "gptqe"
     cfg.backward_frequency = 1
     cfg.warmup_steps = 100

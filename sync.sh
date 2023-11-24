@@ -1,2 +1,2 @@
-scp knakaji@perlmutter.nersc.gov:~/gqe/output/* . 
+scp knakaji@perlmutter.nersc.gov:~/gqe/output/* ./output/ 
 

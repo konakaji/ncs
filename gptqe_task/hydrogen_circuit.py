@@ -4,10 +4,9 @@ from experiment.configs import get_default_configs
 
 def get_hydrogen_cfg():
     cfg = get_default_configs()
-    cfg.distances = [0.5, 0.6, 0.7, 0.7414, 0.8, 0.9, 1.0,
-                     1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2.0]
+    cfg.distances = [2.0]
     cfg.ngates = 10
-    cfg.max_iters = 50
+    cfg.max_iters = 20
     cfg.n_electrons = 2
     cfg.verbose = False
     cfg.temperature = 5
@@ -17,6 +16,11 @@ def get_hydrogen_cfg():
 
 if __name__ == '__main__':
     cfg = get_hydrogen_cfg()
-    for seed in [1, 2, 3]:
-        cfg.seed = seed
-        HydrogenExperiment().train(cfg)
+    cfg.seed = 0
+    exp = HydrogenExperiment()
+    seq = exp._construct_cost(2.0, cfg).sequence
+    seq.tool = "qiskit"
+    seq.get_circuit([58, 53, 55, 63, 43, 58, 49, 56, 58, 59]).draw()
+    import matplotlib.pyplot as plt
+
+    plt.savefig("../output/H2_2_circuit.png")

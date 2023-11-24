@@ -1,3 +1,5 @@
+import random
+
 import torch
 from torch.utils.data import Dataset
 from gqe.util import get_device
@@ -38,8 +40,11 @@ class EnergyDataset(Dataset):
         self.min_indices = None
         for file_path in file_paths:
             with open(file_path) as f:
+                datum = []
                 for l in f.readlines():
                     data = TrajectoryData.from_json(l.rstrip())
+                    datum.append(data)
+                for data in datum:
                     for indices, energy in zip(data.indices, data.energies):
                         if threshold < energy:
                             continue

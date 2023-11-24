@@ -1,9 +1,10 @@
+import math
 import sys
 import os
 import numpy as np
 
 DIR = "../output/"
-counts = [0, 1]
+counts = [1, 2, 3]
 
 if __name__ == '__main__':
     molecule_name = sys.argv[1]
@@ -25,4 +26,4 @@ if __name__ == '__main__':
             f.write(f"{dist}\t{min(values)}\n")
     with open(DIR + f"{molecule_name}_avg.txt", "w") as f:
         for dist, values in m.items():
-            f.write(f"{dist}\t{np.mean(values)}\n")
+            f.write(f"{dist}\t{np.mean(values)}\t{np.std(values) / math.sqrt(len(counts))}\n")

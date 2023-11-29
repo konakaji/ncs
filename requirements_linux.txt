@@ -10,10 +10,10 @@ qiskit-aer==0.11.2
 qiskit-ibmq-provider==0.20.0
 qiskit-terra==0.23.1
 scipy>=1.7.0
-openfermion==1.5.1
-openfermionpyscf==0.5
+pyscf==2.1.0
+openfermion>=1.5.1
+openfermionpyscf>=0.5
 optuna==3.4.0
 ml-collections==0.1.1
 wandb==0.16.0
 transformers==4.31.0
-pyscf

@@ -16,3 +16,4 @@ pip install .
 cd ..
 pip install -r requirements_pt2.txt
 pip install autograd
+pip install numpy==1.23.0

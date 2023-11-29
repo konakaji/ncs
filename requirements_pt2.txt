@@ -1,0 +1,8 @@
+scipy>=1.7.0
+pyscf==2.1.0
+openfermion>=1.5.1
+openfermionpyscf>=0.5
+optuna==3.4.0
+ml-collections==0.1.1
+wandb==0.16.0
+transformers==4.31.0

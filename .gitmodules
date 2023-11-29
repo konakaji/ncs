@@ -1,0 +1,12 @@
+[submodule "qwrapper"]
+	path = qwrapper
+	url = git@github.com:poojarao8/qwrapper.git
+[submodule "qswift"]
+	path = qswift
+	url = git@github.com:poojarao8/qswift.git
+[submodule "benchmark"]
+	path = benchmark
+	url = git@github.com:konakaji/benchmark.git
+[submodule "qml"]
+	path = qml
+	url = git@github.com:konakaji/qml.git

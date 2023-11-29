@@ -9,4 +9,4 @@
 	url = git@github.com:poojarao8/benchmark.git
 [submodule "qml"]
 	path = qml
-	url = git@github.com:konakaji/qml.git
+	url = git@github.com:poojarao8/qml.git

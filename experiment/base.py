@@ -29,7 +29,7 @@ def key(distance):
     return v
 
 
-class GPTQEBase(ABC):
+class GPTQETaskBase(ABC):
     def train(self, cfg):
         fabric = L.Fabric(accelerator="auto", loggers=[self._get_logger(cfg)])
         fabric.seed_everything(cfg.seed)
@@ -56,7 +56,7 @@ class GPTQEBase(ABC):
                     min_energy = m[distance]
                     print("already computed, skipped", distance)
                 else:
-                    indices, min_energy = self._do_run(cfg, distance, fabric)
+                    indices, min_energy = self.do_train(cfg, distance, fabric)
                     min_indices_dict[str(distance)] = indices
                 f.write(f"{distance}\t{min_energy}\n")
         # plt, impath = self.plot_figure(cfg, computed_energies)
@@ -64,94 +64,19 @@ class GPTQEBase(ABC):
         fabric.log('circuit', json.dumps(min_indices_dict))
         return min_indices_dict
 
-    def random_benchmark(self, cfg, seed):
-        random.seed(seed)
-        filename = f'../output/{cfg.molecule_name}_random_{seed}.txt'
-        m = {}
-        if os.path.exists(filename):
-            with open(filename) as f:
-                for l in f.readlines():
-                    dist, v = l.rstrip().split("\t")
-                    m[float(dist)] = float(v)
-        distances = cfg.distances
-        computed_energies = []
-        for distance in distances:
-            if distance in m:
-                computed_energies.append(m[distance])
-                continue
-            cost = self._construct_cost(distance, cfg, print_exact=False)
-            min = 0
-            for _ in range(cfg.max_iters):
-                sequences = torch.randint(high=cost.vocab_size(),
-                                          size=(cfg.num_samples, cfg.ngates))
-                v = torch.min(cost.energy(sequences))
-                if min > v:
-                    min = v
-            min = min.cpu()
-            computed_energies.append(min)
-        with open(filename, 'w') as f:
-            for dist, energy in zip(distances, computed_energies):
-                f.write(f"{dist}\t{energy}\n")
-        return computed_energies
-
     def train_single(self, cfg):
         fabric = L.Fabric(accelerator="auto", loggers=[self._get_logger(cfg)])
         fabric.seed_everything(cfg.seed)
         fabric.launch()
 
-        min_indices, energy = self._do_run(cfg, cfg.distance, fabric)
+        min_indices, energy = self.do_train(cfg, cfg.distance, fabric)
         fabric.log('circuit', json.dumps(min_indices))
         return min_indices, energy
 
-    def pretrain(self, cfg, data_loader):
-        fabric = L.Fabric(accelerator="auto", loggers=[self._get_logger(cfg)])
-        fabric.seed_everything(cfg.seed)
-        fabric.launch()
-        model = Transformer(cfg, 'pretrain')
-        optimizer = torch.optim.AdamW(model.parameters(), lr=cfg.lr)
-        model, optimizer = fabric.setup(model, optimizer)
-        if 'pretrain' in cfg.check_points:
-            print("loaded from the checkpoint")
-            cp = fabric.load(cfg.check_points['pretrain'])
-            model.load_state_dict(cp["model"])
-            optimizer.load_state_dict(cp["optimizer"])
-        pytorch_total_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
-        print(f"total trainable params: {pytorch_total_params / 1e6:.2f}M")
-        # model.train()
-        size = len(data_loader)
-        for iter in range(cfg.max_iters):
-            current = 0
-            for input, energies in data_loader:
-                optimizer.zero_grad()
-                loss, energies, indices, log_values = model.train_step(indices=input.to(get_device()),
-                                                                       energies=energies.to(get_device()))
-                if cfg.verbose:
-                    print(f"{loss.item()} at {current}/{size} ({iter}/{cfg.max_iters})")
-                fabric.log_dict(log_values, step=current + size * iter)
-                fabric.backward(loss)
-                fabric.clip_gradients(model, optimizer, max_norm=cfg.grad_norm_clip)
-                optimizer.step()
-                current += 1
-        model.set_cost(None)
-        state = {"model": model, "optimizer": optimizer, "hparams": model.hparams}
-        path = cfg.save_dir + f"{cfg.molecule_name}_{cfg.seed}_checkpoint_pretrain.ckpt"
-        fabric.save(path, state)
-        return path
-
-    def _get_logger(self, cfg):
-        cfg.run_name = datetime.now() \
-            .strftime("{}_{}_run_%m%d_%H_%M".format(cfg.molecule_name, cfg.seed))
-        cfg.save_dir = f"checkpoints/{cfg.name}/{cfg.run_name}/"
-        return WandbLogger(
-            project=cfg.name,
-            name=cfg.run_name,
-            log_model=True,
-        )
-
-    def _do_run(self, cfg, distance, fabric):
+    def do_train(self, cfg, distance, fabric):
         print(cfg)
         monitor = FileMonitor()
-        cost = self._construct_cost(distance, cfg)
+        cost = self.construct_cost(distance, cfg)
         if cfg.dry:
             return None, None
         cfg.vocab_size = cost.vocab_size()
@@ -203,10 +128,45 @@ class GPTQEBase(ABC):
         indices = min_indices.cpu().numpy().tolist()
         return indices, min_energy
 
-    def _construct_cost(self, distance, cfg, print_exact=True):
+    def pretrain(self, cfg, data_loader):
+        fabric = L.Fabric(accelerator="auto", loggers=[self._get_logger(cfg)])
+        fabric.seed_everything(cfg.seed)
+        fabric.launch()
+        model = Transformer(cfg, 'pretrain')
+        optimizer = torch.optim.AdamW(model.parameters(), lr=cfg.lr)
+        model, optimizer = fabric.setup(model, optimizer)
+        if 'pretrain' in cfg.check_points:
+            print("loaded from the checkpoint")
+            cp = fabric.load(cfg.check_points['pretrain'])
+            model.load_state_dict(cp["model"])
+            optimizer.load_state_dict(cp["optimizer"])
+        pytorch_total_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
+        print(f"total trainable params: {pytorch_total_params / 1e6:.2f}M")
+        # model.train()
+        size = len(data_loader)
+        for iter in range(cfg.max_iters):
+            current = 0
+            for input, energies in data_loader:
+                optimizer.zero_grad()
+                loss, energies, indices, log_values = model.train_step(indices=input.to(get_device()),
+                                                                       energies=energies.to(get_device()))
+                if cfg.verbose:
+                    print(f"{loss.item()} at {current}/{size} ({iter}/{cfg.max_iters})")
+                fabric.log_dict(log_values, step=current + size * iter)
+                fabric.backward(loss)
+                fabric.clip_gradients(model, optimizer, max_norm=cfg.grad_norm_clip)
+                optimizer.step()
+                current += 1
+        model.set_cost(None)
+        state = {"model": model, "optimizer": optimizer, "hparams": model.hparams}
+        path = cfg.save_dir + f"{cfg.molecule_name}_{cfg.seed}_checkpoint_pretrain.ckpt"
+        fabric.save(path, state)
+        return path
+
+    def construct_cost(self, distance, cfg, print_exact=True):
         molecule = self.get_molecule(distance, cfg)
 
-        hamiltonian = self._get_hamiltonian(molecule, cfg)
+        hamiltonian = self.get_hamiltonian(molecule, cfg)
         if print_exact:
             k = '.' + to_hash(hamiltonian)
             if os.path.exists(k):
@@ -225,6 +185,18 @@ class GPTQEBase(ABC):
         cost = EnergyCost(hamiltonian, initializer, pool, cfg.time_pool)
         return cost
 
+    def plot_figure(self, cfg, computed_energies, errors=None):
+        maker = FigureMaker(self)
+        maker.run(cfg, computed_energies, errors)
+
+    def get_hamiltonian(self, molecule, cfg):
+        hamiltonian = DiatomicMolecularHamiltonian(cfg.nqubit, molecule, bravyi_kitaev=cfg.is_bravyi)
+        return hamiltonian
+
+    @abstractmethod
+    def get_molecule(self, distance, cfg):
+        pass
+
     def _get_operator_pool(self, molecule, cfg):
         uccsd = UCCSD(cfg.nqubit, molecule)
         paulis = uccsd.paulis
@@ -232,37 +204,28 @@ class GPTQEBase(ABC):
         paulis.append(PauliObservable(identity))
         return DefaultOperatorPool(paulis)
 
-    def plot_figure(self, cfg, computed_energies, errors=None):
+    def _get_logger(self, cfg):
+        cfg.run_name = datetime.now() \
+            .strftime("{}_{}_run_%m%d_%H_%M".format(cfg.molecule_name, cfg.seed))
+        cfg.save_dir = f"checkpoints/{cfg.name}/{cfg.run_name}/"
+        return WandbLogger(
+            project=cfg.name,
+            name=cfg.run_name,
+            log_model=True,
+        )
+
+
+class FigureMaker:
+    def __init__(self, task, seeds=[1, 2, 3]):
+        self.task = task
+        self.exact = Exact(task)
+        self.benchmark = Benchmark(task)
+        self.seeds = seeds
+
+    def run(self, cfg, computed_energies, errors=None):
         fabric = L.Fabric(accelerator="auto", loggers=[self._get_logger(cfg)])
         fabric.launch()
         distances = cfg.distances
-        min_d = distances[0] - 0.1
-        max_d = distances[len(distances) - 1] + 0.1
-        n_bin = 50
-
-        xs = []
-        ys = []
-        ys3 = []
-        initializer = HFStateInitializer(n_electrons=cfg.n_electrons)
-        gs_file = f"../output/gs_{cfg.molecule_name}.txt"
-        print("exact ground state")
-        if not os.path.exists(gs_file):
-            with open(gs_file, "w") as f:
-                for j in range(n_bin):
-                    d = min_d + (max_d - min_d) / (n_bin - 1) * j
-                    molecule = self.get_molecule(d, cfg)
-                    hamiltonian = self._get_hamiltonian(molecule, cfg)
-                    ge = compute_ground_state(hamiltonian)
-                    scf = hamiltonian.exact_value(initializer.init_circuit(cfg.nqubit, [], "qulacs"))
-                    f.write(f"{d}\t{ge}\t{scf}\n")
-        with open(gs_file) as f:
-            for l in f.readlines():
-                d, ge, scf = l.rstrip().split("\t")
-                if float(d) < distances[0] - 0.1 or float(d) > distances[len(distances) - 1] + 0.1:
-                    continue
-                xs.append(float(d))
-                ys.append(float(ge))
-                ys3.append(float(scf))
 
         print("random benchmark")
         if errors is not None:
@@ -275,12 +238,13 @@ class GPTQEBase(ABC):
             xs2.append(d)
             ys2.append(computed_energies[i])
 
-        # p.grid('-')
+        xs, ys, ys3 = self.exact.run(cfg)
         p.plot(xs, ys, label='exact', linewidth=2, color='#333333')
         if errors is None:
             p.plot(distances, computed_energies, label='gpt-qe', marker='o', linewidth=0, color='#008176')
         else:
-            p.errorbar(distances, computed_energies, errors, label='gpt-qe', marker='o', linewidth=0, elinewidth=1, color='#008176')
+            p.errorbar(distances, computed_energies, errors, label='gpt-qe', marker='o', linewidth=0, elinewidth=1,
+                       color='#008176')
         p.plot(xs, ys3, label='hf', linewidth=2, linestyle="dotted", color='#999999')
         p.xlabel('bond length (angstrom)', fontsize=12)
         p.ylabel('energy value (Hartree)', fontsize=12)
@@ -296,24 +260,84 @@ class GPTQEBase(ABC):
         p.clf()
 
     def _plot_random(self, cfg, xs):
-        randoms1 = self.random_benchmark(cfg, 1)
-        randoms2 = self.random_benchmark(cfg, 2)
-        randoms3 = self.random_benchmark(cfg, 3)
+        rs = []
+        for seed in self.seeds:
+            rs.append(self.benchmark.task.run(cfg, seed))
 
         randoms = []
         random_errors = []
         for j, x in enumerate(xs):
-            array = [randoms1[j], randoms2[j], randoms3[j]]
+            array = [r[j] for r in rs]
             mean = numpy.mean(array)
             error = numpy.std(array) / math.sqrt(len(array))
             randoms.append(mean)
             random_errors.append(error)
-        p.errorbar(xs, randoms, random_errors, label='benchmark', marker='x', linewidth=0, elinewidth=1, color='#666666')
+        p.errorbar(xs, randoms, random_errors, label='benchmark', marker='x', linewidth=0, elinewidth=1,
+                   color='#666666')
 
-    def _get_hamiltonian(self, molecule, cfg):
-        hamiltonian = DiatomicMolecularHamiltonian(cfg.nqubit, molecule, bravyi_kitaev=cfg.is_bravyi)
-        return hamiltonian
 
-    @abstractmethod
-    def get_molecule(self, distance, cfg):
-        pass
+class Exact:
+    def __init__(self, task, n_bin=50):
+        self.task = task
+        self.n_bin = n_bin
+
+    def run(self, cfg):
+        distances = cfg.distances
+        gs_energies = []
+        scf_energies = []
+        initializer = HFStateInitializer(n_electrons=cfg.n_electrons)
+        gs_file = f"../output/gs_{cfg.molecule_name}.txt"
+        min_d = distances[0] - 0.1
+        max_d = distances[len(distances) - 1] + 0.1
+        if not os.path.exists(gs_file):
+            with open(gs_file, "w") as f:
+                for j in range(self.n_bin):
+                    d = min_d + (max_d - min_d) / (self.n_bin - 1) * j
+                    molecule = self.task.get_molecule(d, cfg)
+                    hamiltonian = self.task.get_hamiltonian(molecule, cfg)
+                    ge = compute_ground_state(hamiltonian)
+                    scf = hamiltonian.exact_value(initializer.init_circuit(cfg.nqubit, [], "qulacs"))
+                    f.write(f"{d}\t{ge}\t{scf}\n")
+        with open(gs_file) as f:
+            for l in f.readlines():
+                d, ge, scf = l.rstrip().split("\t")
+                if float(d) < distances[0] - 0.1 or float(d) > distances[len(distances) - 1] + 0.1:
+                    continue
+                distances.append(float(d))
+                gs_energies.append(float(ge))
+                scf_energies.append(float(scf))
+        return distances, gs_energies, scf_energies
+
+
+class Benchmark:
+    def __init__(self, task):
+        self.task = task
+
+    def run(self, cfg, seed):
+        random.seed(seed)
+        filename = f'../output/{cfg.molecule_name}_random_{seed}.txt'
+        m = {}
+        if os.path.exists(filename):
+            with open(filename) as f:
+                for l in f.readlines():
+                    dist, v = l.rstrip().split("\t")
+                    m[float(dist)] = float(v)
+        distances = cfg.distances
+        computed_energies = []
+        for distance in distances:
+            if distance in m:
+                computed_energies.append(m[distance])
+                continue
+            cost = self.task.construct_cost(distance, cfg, print_exact=False)
+            min = 0
+            for _ in range(cfg.max_iters):
+                sequences = torch.randint(high=cost.vocab_size(),
+                                          size=(cfg.num_samples, cfg.ngates))
+                v = torch.min(cost.energy(sequences)).cpu()
+                if min > v:
+                    min = v
+            computed_energies.append(min)
+        with open(filename, 'w') as f:
+            for dist, energy in zip(distances, computed_energies):
+                f.write(f"{dist}\t{energy}\n")
+        return computed_energies

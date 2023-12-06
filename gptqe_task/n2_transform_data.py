@@ -24,7 +24,7 @@ if __name__ == '__main__':
     dataset = EnergyDataset(["../output/N2_trajectory_1.2.ckpt"])
     cfg = get_n2_configs()
     exp = N2Experiment()
-    cost = exp._construct_cost(cfg.distance, cfg, print_exact=False)
+    cost = exp.construct_cost(cfg.distance, cfg, print_exact=False)
     datum = []
     tensors = []
     energies = []

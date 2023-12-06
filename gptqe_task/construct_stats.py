@@ -1,6 +1,5 @@
 import math
 import sys
-import os
 import numpy as np
 
 DIR = "../output/"
@@ -8,9 +7,11 @@ counts = [1, 2, 3]
 
 if __name__ == '__main__':
     molecule_name = sys.argv[1]
+    seeds_string = sys.argv[2]
+    seeds = seeds_string.split(",")
     m = {}
-    for count in counts:
-        file = f"{molecule_name}_{count}.txt"
+    for seed in seeds:
+        file = f"{molecule_name}_{seed}.txt"
         m_name = file.split("_")
         path = DIR + file
         with open(path) as f:

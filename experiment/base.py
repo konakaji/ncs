@@ -37,7 +37,7 @@ class GPTQETaskBase(ABC):
 
         min_indices_dict = {}
         distances = cfg.distances
-        filename = f"../output/{cfg.molecule_name}_{cfg.seed}.txt"
+        filename = f"{cfg.save_dir}{cfg.molecule_name}_{cfg.seed}.txt"
         m = {}
         if os.path.exists(filename):
             with open(filename) as f:
@@ -91,7 +91,6 @@ class GPTQETaskBase(ABC):
             optimizer.load_state_dict(cp["optimizer"])
         pytorch_total_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
         print(f"total trainable params: {pytorch_total_params / 1e6:.2f}M")
-        # model.train()
         min_energy = sys.maxsize
         min_indices = None
         for epoch in range(cfg.max_iters):
@@ -124,7 +123,7 @@ class GPTQETaskBase(ABC):
         # state = {"model": model, "optimizer": optimizer, "hparams": model.hparams}
         # fabric.save(cfg.save_dir + f"checkpoint_{distance}.ckpt", state)
         if cfg.save_data:
-            monitor.save(f"../output/{cfg.molecule_name}_trajectory_{distance}.ckpt")
+            monitor.save(f"{cfg.save_dir}{cfg.molecule_name}_trajectory_{distance}.ckpt")
         indices = min_indices.cpu().numpy().tolist()
         return indices, min_energy
 
@@ -159,7 +158,7 @@ class GPTQETaskBase(ABC):
                 current += 1
         model.set_cost(None)
         state = {"model": model, "optimizer": optimizer, "hparams": model.hparams}
-        path = cfg.save_dir + f"{cfg.molecule_name}_{cfg.seed}_checkpoint_pretrain.ckpt"
+        path = f"{cfg.save_dir}{cfg.molecule_name}_{cfg.seed}_checkpoint_pretrain.ckpt"
         fabric.save(path, state)
         return path
 
@@ -207,7 +206,7 @@ class GPTQETaskBase(ABC):
     def _get_logger(self, cfg):
         cfg.run_name = datetime.now() \
             .strftime("{}_{}_run_%m%d_%H_%M".format(cfg.molecule_name, cfg.seed))
-        cfg.save_dir = f"checkpoints/{cfg.name}/{cfg.run_name}/"
+        cfg.save_dir = f"{cfg.save_dir}checkpoints/{cfg.name}/{cfg.run_name}/"
         return WandbLogger(
             project=cfg.name,
             name=cfg.run_name,
@@ -254,7 +253,7 @@ class FigureMaker:
         suffix = ""
         if errors is not None:
             suffix = "-detail"
-        impath = f"../output/result-{cfg.molecule_name}{suffix}.pdf"
+        impath = f"{cfg.save_dir}result-{cfg.molecule_name}{suffix}.pdf"
         p.savefig(impath)
         fabric.log('result', wandb.Image(p))
         p.clf()
@@ -286,7 +285,7 @@ class Exact:
         gs_energies = []
         scf_energies = []
         initializer = HFStateInitializer(n_electrons=cfg.n_electrons)
-        gs_file = f"../output/gs_{cfg.molecule_name}.txt"
+        gs_file = f"{cfg.save_dir}gs_{cfg.molecule_name}.txt"
         min_d = distances[0] - 0.1
         max_d = distances[len(distances) - 1] + 0.1
         if not os.path.exists(gs_file):
@@ -315,7 +314,7 @@ class Benchmark:
 
     def run(self, cfg, seed):
         random.seed(seed)
-        filename = f'../output/{cfg.molecule_name}_random_{seed}.txt'
+        filename = f'{cfg.save_dir}{cfg.molecule_name}_random_{seed}.txt'
         m = {}
         if os.path.exists(filename):
             with open(filename) as f:

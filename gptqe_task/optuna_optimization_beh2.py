@@ -6,9 +6,9 @@ from experiment.experiment import BeH2Experiment
 def get_beh2_configs():
     cfg = get_default_configs()
     cfg.distance = 2.5
-    cfg.ngates = 80
+    cfg.ngates = 120
     cfg.max_iters = 500
-    cfg.num_samples = 15
+    cfg.num_samples = 50
     cfg.backward_frequency = 1
     cfg.n_electrons = 4
     cfg.energy_offset = 14
@@ -25,7 +25,7 @@ def get_beh2_configs():
 def gptqe_main(
         trials,
         molecule_name,
-        n_steps=300,
+        n_steps=500,
 ):
     print("Optuna will be apply to optimize the model")
     print(f" molecule_name {molecule_name}")
@@ -33,11 +33,13 @@ def gptqe_main(
     cfg.max_iters = n_steps
     cfg.ngates = trials.suggest_int("ngates", 40, cfg.ngates, 1)
     cfg.temperature = trials.suggest_float("temperature", cfg.temperature, 20.0, step=5)
-    cfg.del_temperature = trials.suggest_float("del_temperature", 0.0, 1.0, step=0.05)
+    cfg.pool_coeff = trials.suggest_float("pool_coeff", 0.5, 1, step=0.01)
+    cfg.time_pool = [cfg.pool_coeff * v for v in cfg.time_pool]
+    #cfg.del_temperature = trials.suggest_float("del_temperature", 0.0, 1.0, step=0.05)
 
-    cfg.embd_pdrop = trials.suggest_float("embd_pdrop", 0.0, 0.99, step=0.01)
-    cfg.attn_pdrop = trials.suggest_float("attn_pdrop", 0.0, 0.99, step=0.01)
-    cfg.num_samples = trials.suggest_int("num_samples", 5, 100, 1)  # we may need to change the bondry for this one
+    #cfg.embd_pdrop = trials.suggest_float("embd_pdrop", 0.0, 0.99, step=0.01)
+    #cfg.attn_pdrop = trials.suggest_float("attn_pdrop", 0.0, 0.99, step=0.01)
+    #cfg.num_samples = trials.suggest_int("num_samples", 5, 100, 1)  # we may need to change the bondry for this one
 
     indices, energy = BeH2Experiment().train_single(cfg)
 

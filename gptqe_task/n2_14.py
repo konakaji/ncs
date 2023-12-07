@@ -4,15 +4,16 @@ import sys
 
 def get_n2_configs():
     cfg = get_default_configs()
-    cfg.distances = [0.9, 1.0, 1.1, 1.2, 1.3, 1.5, 1.6, 1.7, 1.8]
+    cfg.distances = [1.4]
     cfg.ngates = 40
     cfg.max_iters = 500
     cfg.num_samples = 50
     cfg.n_electrons = 6 
     cfg.energy_offset = 106
     cfg.nqubit = 12
+    cfg.temperature = 10
     cfg.del_temperature = 0.1
-    cfg.molecule_name = "N2"
+    cfg.molecule_name = "N2142"
     #cfg.dry = True
     return cfg
 

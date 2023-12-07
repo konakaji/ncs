@@ -11,7 +11,7 @@ import random, sys, logging, time, math
 
 
 class IIDEstimator:
-    def __init__(self, obs: Hamiltonian, initializer, N, K, n_sample, n_grad_sample, tool='qulacs', shot=0):
+    def __init__(self, obs: Hamiltonian, initializer, N, K, n_sample, n_grad_sample, tool='qulacs', shot=0, executor=None):
         """
         :param obs: Hamiltonian, where we want to get the ground state
         :param initializer: The initializer of the quantum circuit
@@ -37,10 +37,10 @@ class IIDEstimator:
             # Generate measurements for each pauli in the Hamiltonian one by one
             self.measurement_gen = NaiveGenerator(obs.hs)
         self.initializer = initializer
-        self.executor = QSwiftExecutor()
+        self.executor = QSwiftExecutor() if executor == None else executor
         self.N = N
         self.K = K
-        
+        self.tool = tool 
         self.shot = shot
         self.n_sample = n_sample
         self.n_grad_sample = n_grad_sample
@@ -148,7 +148,7 @@ class IIDEstimator:
             # Directly calculate the expectation value of the Hamiltonian
             return Compiler(operator_pool=operator_pool,
                             observables=[self.obs],
-                            initializer=self.initializer, nshot=self.shot, tau=tau)
+                            initializer=self.initializer, nshot=self.shot, tau=tau, tool=self.tool)
         else:
             # Evaluate each pauli in the Hamiltonian one by one
             return Compiler(operator_pool=operator_pool,

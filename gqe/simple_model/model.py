@@ -98,4 +98,5 @@ class SimpleModel:
         for j in range(len(params)):
             sign = 1 if self.ansatz.h_vec[j] > 0 else -1
             grads.append(sign * self.estimator.grad(sampler, pool, self.lam, j))
+        print("Grads are ", grads)
         return np.array(grads)

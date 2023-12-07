@@ -92,3 +92,11 @@ simulators/
 
 # JetBrains IDE files
 .idea
+gptqe_task/.*
+gptqe_task/*.hdf5
+gptqe_task/checkpoints
+.*
+*.hdf5
+output
+wandb
+checkpoints

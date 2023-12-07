@@ -13,8 +13,9 @@ def get_n2_configs():
     cfg.n_electrons = 6
     cfg.energy_offset = 106
     cfg.nqubit = 12
+    cfg.temperature = 5
     cfg.del_temperature = 0.1
-    cfg.molecule_name = "N2"
+    cfg.molecule_name = "N23"
     cfg.max_iters = 1
     cfg.save_dir = "../output/"
     cfg.vocab_size = 1390
@@ -27,17 +28,17 @@ def get_n2_configs():
 
 
 if __name__ == '__main__':
+    seed = sys.argv[1]
     cfg = get_n2_configs()
-    for seed in [0, 1, 2]:
-        cfg.seed = seed
-        cfg.max_iters = 1
-        cfg.temperature = 5
-        loader = DataLoader(EnergyDataset(['../output/N2_transfer_1.2_to_1.4.ckpt']), batch_size=50)
-        path = N2Experiment().pretrain(cfg, loader)
-        cfg.check_points = {"1_4": path}
-        cfg.resid_pdrop = 0
-        cfg.embd_pdrop = 0
-        cfg.attn_pdrop = 0
-        cfg.max_iters = 200
-        cfg.temperature = 10
-        N2Experiment().train_single(cfg)
+    cfg.seed = int(seed)
+    cfg.max_iters = 1
+    cfg.temperature = 5
+    loader = DataLoader(EnergyDataset(['../output/N2_transfer_1.2_to_1.4.ckpt'], threshold=-107.45), batch_size=50)
+    path = N2Experiment().pretrain(cfg, loader)
+    cfg.check_points = {"1_4": path}
+    cfg.resid_pdrop = 0
+    cfg.embd_pdrop = 0
+    cfg.attn_pdrop = 0
+    cfg.max_iters = 500
+    cfg.temperature = 5 
+    N2Experiment().train_single(cfg)

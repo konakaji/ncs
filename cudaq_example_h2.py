@@ -68,7 +68,7 @@ class MyQSwiftExecutor:
             f"evaluate ({len(swift_channels)}): {time.time() - middle}")
 
         if numQpus > 1:
-            values = [c * v.get().expectation_z() for (c, v) in values]
+            values = [v.get() for v in values]
         
         end = timeit.default_timer()
         if len(values):

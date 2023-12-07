@@ -18,7 +18,7 @@ if __name__ == '__main__':
     cfg = get_hydrogen_cfg()
     cfg.seed = 0
     exp = HydrogenExperiment()
-    seq = exp._construct_cost(2.0, cfg).sequence
+    seq = exp.construct_cost(2.0, cfg).sequence
     seq.tool = "qiskit"
     seq.get_circuit([58, 53, 55, 63, 43, 58, 49, 56, 58, 59]).draw()
     import matplotlib.pyplot as plt

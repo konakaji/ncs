@@ -6,6 +6,7 @@ def get_o2_configs():
     cfg = get_default_configs()
     cfg.distances = [1.0, 1.1, 1.2, 1.3, 1.5, 1.7, 1.9]
     cfg.ngates = 40
+    cfg.temperature = 10
     cfg.max_iters = 500
     cfg.num_samples = 50
     cfg.n_electrons = 8
@@ -13,6 +14,7 @@ def get_o2_configs():
     cfg.nqubit = 12
     cfg.del_temperature = 0.1
     cfg.molecule_name = "O2"
+    cfg.tool = "cudaq"
     return cfg
 
 

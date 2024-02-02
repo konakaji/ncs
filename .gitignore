@@ -100,3 +100,6 @@ gptqe_task/checkpoints
 output
 wandb
 checkpoints
+*.out
+gptqe_task/tmp*
+gptqe_task/playground.py

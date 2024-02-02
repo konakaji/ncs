@@ -8,14 +8,32 @@ def get_o2_configs():
     cfg.ngates = 40
     cfg.max_iters = 500
     cfg.num_samples = 50
-    cfg.n_electrons = 8 
+    cfg.n_electrons = 8
     cfg.energy_offset = 147
     cfg.nqubit = 12
     cfg.del_temperature = 0.1
     cfg.molecule_name = "O2"
-    cfg.save_dir = ""
     return cfg
 
 
 if __name__ == '__main__':
-     O2Experiment().plot_figure(get_o2_configs(), [-147.4266, -147.594, -147.660, -147.685, -147.662, -147.628, -147.605])
+    m = {}
+    with open("../output/O2_min.txt") as f:
+        for l in f.readlines():
+            dist, energy = l.rstrip().split("\t")
+            m[float(dist)] = float(energy)
+    cfg = get_o2_configs()
+    O2Experiment().plot_figure(cfg, [m[dist] for dist in cfg.distances])
+
+    m = {}
+    e = {}
+    with open("../output/O2_avg.txt") as f:
+        for l in f.readlines():
+            dist, energy, error = l.rstrip().split("\t")
+            m[float(dist)] = float(energy)
+            e[float(dist)] = float(error)
+    cfg = get_o2_configs()
+    O2Experiment().plot_figure(cfg,
+                                     [m[dist] for dist in cfg.distances],
+                                     [e[dist] for dist in cfg.distances])
+

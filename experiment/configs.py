@@ -24,6 +24,7 @@ def get_default_configs():
     cfg = ConfigDict()
     cfg.verbose = False
     cfg.save_data = False
+    cfg.print_exact = True
     cfg.name = "gptqe"
     cfg.backward_frequency = 1
     cfg.warmup_steps = 100
@@ -34,7 +35,8 @@ def get_default_configs():
     cfg.seed = 3047
     cfg.transformation = 'jordan-wigner'
     cfg.distances = [0.5, 0.6, 0.7, 0.7414, 0.8, 0.9, 1.0, 1.5, 2.0]  # choices of the distance between two atoms
-    cfg.time_pool = [0.00625, -0.00625, 0.0125, -0.0125, 0.025, -0.025, 0.05, -0.05, 0.1, -0.1]
+    cfg.time_pool = [0.003125, -0.003125, 0.00625, -0.00625, 0.0125, -0.0125, 0.025, -0.025, 0.05, -0.05, 0.1, -0.1]
+    cfg.time_factor = 1.0
     cfg.is_bravyi = cfg.transformation == 'bravyi-kitaev'
     cfg.lr = 5e-7
     cfg.energy_offset = 0.0

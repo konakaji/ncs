@@ -77,7 +77,7 @@ class GPTQETaskBase(ABC):
     def do_train(self, cfg, distance, fabric):
         print(cfg)
         monitor = FileMonitor()
-        cost = self.construct_cost(distance, cfg)
+        cost = self.construct_cost(distance, cfg, cfg.print_exact)
         if cfg.dry:
             return None, None
         cfg.vocab_size = cost.vocab_size()
@@ -210,7 +210,7 @@ class GPTQETaskBase(ABC):
         return WandbLogger(
             project=cfg.name,
             name=cfg.run_name,
-            log_model=True,
+            log_model=False,
         )
 
 
@@ -255,10 +255,19 @@ class FigureMaker:
         fabric.log('result', wandb.Image(p))
         p.clf()
 
+    def _get_logger(self, cfg):
+        cfg.run_name = datetime.now() \
+            .strftime("{}_{}_run_%m%d_%H_%M".format(cfg.molecule_name, cfg.seed))
+        return WandbLogger(
+            project=cfg.name,
+            name=cfg.run_name,
+            log_model=True,
+        )
+
     def _plot_random(self, cfg, xs):
         rs = []
         for seed in self.seeds:
-            rs.append(self.benchmark.task.run(cfg, seed))
+            rs.append(self.benchmark.run(cfg, seed))
 
         randoms = []
         random_errors = []
@@ -294,15 +303,16 @@ class Exact:
                     ge = compute_ground_state(hamiltonian)
                     scf = hamiltonian.exact_value(initializer.init_circuit(cfg.nqubit, [], "qulacs"))
                     f.write(f"{d}\t{ge}\t{scf}\n")
+        ds = []
         with open(gs_file) as f:
             for l in f.readlines():
                 d, ge, scf = l.rstrip().split("\t")
                 if float(d) < distances[0] - 0.1 or float(d) > distances[len(distances) - 1] + 0.1:
                     continue
-                distances.append(float(d))
+                ds.append(float(d))
                 gs_energies.append(float(ge))
                 scf_energies.append(float(scf))
-        return distances, gs_energies, scf_energies
+        return ds, gs_energies, scf_energies
 
 
 class Benchmark:

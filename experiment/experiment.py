@@ -29,3 +29,9 @@ class O2Experiment(GPTQETaskBase):
     def get_molecule(self, distance, cfg):
         return generate_molecule("O", "O", distance, "sto-3g", active_orbitals=[4, 5, 6, 7, 8, 9],
                                  bravyi_kitaev=False)
+
+
+class CO2Experiment(GPTQETaskBase):
+    def get_molecule(self, distance, cfg):
+        geometry = f"O 0.0 0.0 0.0\n" + f"C 0.0 0.0 {distance}\n" + f"O 0.0 0.0 {2 * distance}\n"
+        return do_generate_molecule(geometry, "sto-3g", active_orbitals=[6, 7, 8, 9, 10, 11, 12, 13, 14], bravyi_kitaev=False)

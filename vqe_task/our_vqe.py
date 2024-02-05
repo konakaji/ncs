@@ -38,5 +38,5 @@ class CustomVQE:
 
 
 if __name__ == '__main__':
-    molecule = generate_molecule("N", "N", 1.8, "sto-3g", active_orbitals=[4, 5, 6, 7, 8, 9])
-    CustomVQE(molecule, 12, 6).run(20)
+    molecule = generate_molecule("O", "O", 1.3, "sto-3g", active_orbitals=[4, 5, 6, 7, 8, 9])
+    CustomVQE(molecule, 12, 6).run(count=40)

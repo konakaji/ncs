@@ -23,6 +23,7 @@ from gqe.util import get_device
 from datetime import datetime
 from benchmark.molecule import DiatomicMolecularHamiltonian
 from experiment.const import *
+from experiment.temperature import *
 
 
 def key(distance):
@@ -31,6 +32,9 @@ def key(distance):
 
 
 class GPTQETaskBase(ABC):
+    def __init__(self, temperature_scheduler: TemperatureScheduler = None) -> None:
+        self.temperature_scheduler = temperature_scheduler
+
     def train(self, cfg):
         fabric = L.Fabric(accelerator="auto", loggers=[self._get_logger(cfg)])
         fabric.seed_everything(cfg.seed)
@@ -119,7 +123,10 @@ class GPTQETaskBase(ABC):
             fabric.clip_gradients(model, optimizer, max_norm=cfg.grad_norm_clip)
             optimizer.step()
             # scheduler.step()
-            model.temperature += cfg.del_temperature
+            if self.temperature_scheduler is not None:
+                model.temperature = self.temperature_scheduler.get(epoch)
+            else:
+                model.temperature += cfg.del_temperature
         model.set_cost(None)
         # state = {"model": model, "optimizer": optimizer, "hparams": model.hparams}
         # fabric.save(cfg.save_dir + f"checkpoint_{distance}.ckpt", state)
@@ -179,10 +186,11 @@ class GPTQETaskBase(ABC):
                     f.write(str(ge))
             print("ground state:", ge)
         initializer = HFStateInitializer(n_electrons=cfg.n_electrons)
-        scf = hamiltonian.exact_value(initializer.init_circuit(cfg.nqubit, [], "qulacs"))
+        scf = hamiltonian.exact_value(initializer.init_circuit(cfg.nqubit, [], tool=cfg.tool))
         print("hf state:", scf)
+        print("identity:", hamiltonian._identity)
         pool = self._get_operator_pool(molecule, cfg)
-        cost = EnergyCost(hamiltonian, initializer, pool, cfg.time_pool)
+        cost = EnergyCost(hamiltonian, initializer, pool, cfg.time_pool, tool=cfg.tool)
         return cost
 
     def plot_figure(self, cfg, computed_energies, errors=None):
@@ -301,7 +309,7 @@ class Exact:
                     molecule = self.task.get_molecule(d, cfg)
                     hamiltonian = self.task.get_hamiltonian(molecule, cfg)
                     ge = compute_ground_state(hamiltonian)
-                    scf = hamiltonian.exact_value(initializer.init_circuit(cfg.nqubit, [], "qulacs"))
+                    scf = hamiltonian.exact_value(initializer.init_circuit(cfg.nqubit, [], cfg.tool))
                     f.write(f"{d}\t{ge}\t{scf}\n")
         ds = []
         with open(gs_file) as f:

@@ -4,7 +4,8 @@ import tequila as tq
 
 
 class UCCSD(ListablePool):
-    def __init__(self, nqubit, molecule=None, method='MP2', threshold=1.e-6, trotter_steps=1,
+    def __init__(self, nqubit, molecule=None, method='MP2', threshold=1.e-6, trotter_steps=1, 
+                 symmetry_reduction = True,
                  **kwargs):
         if molecule is None:
             atom1type = kwargs["atom1type"]
@@ -24,7 +25,7 @@ class UCCSD(ListablePool):
                     if v == "Y":
                         y_count += 1
                     p_array[k] = v
-                if y_count % 2 == 0:
+                if symmetry_reduction and y_count % 2 == 0:
                     # only odd y_count term is added
                     continue
                 p_string = "".join(p_array)

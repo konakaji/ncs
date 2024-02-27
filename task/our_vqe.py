@@ -2,7 +2,7 @@ import random
 
 from tequila import Molecule
 from gqe.operator_pool.uccsd import UCCSD
-from gqe.vqa.initializer import InitializerDelegate
+from experiment.finetune import InitializerDelegate
 from gqe.common.initializer import HFStateInitializer
 from qml.core.pqc import TimeEvolutionPQC
 from qml.core.vqe import VQE, Energy

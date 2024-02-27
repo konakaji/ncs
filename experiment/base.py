@@ -21,7 +21,7 @@ from gqe.mingpt.cost import EnergyCost
 from gqe.gptqe.monitor import FileMonitor
 from gqe.util import get_device
 from datetime import datetime
-from benchmark.molecule import DiatomicMolecularHamiltonian
+from experiment.molecule import DiatomicMolecularHamiltonian
 from experiment.const import *
 from experiment.temperature import *
 
@@ -31,7 +31,7 @@ def key(distance):
     return v
 
 
-class GPTQETaskBase(Task, ABC):
+class GPTQETaskBase(ABC):
     def __init__(self, temperature_scheduler: TemperatureScheduler = None) -> None:
         self.temperature_scheduler = temperature_scheduler
 

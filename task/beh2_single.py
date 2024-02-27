@@ -18,7 +18,7 @@ def get_beh2_configs():
 
 
 if __name__ == '__main__':
-    seed = int(sys.argv[1])
+    seed = 4
     cfg = get_beh2_configs()
     cfg.seed = seed
     BeH2Experiment().train(cfg)

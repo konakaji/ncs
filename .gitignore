@@ -92,14 +92,14 @@ simulators/
 
 # JetBrains IDE files
 .idea
-gptqe_task/.*
-gptqe_task/*.hdf5
-gptqe_task/checkpoints
+task/.*
+task/*.hdf5
+task/checkpoints
 .*
 *.hdf5
 output
 wandb
 checkpoints
 *.out
-gptqe_task/tmp*
-gptqe_task/playground.py
+task/tmp*
+task/playground.py

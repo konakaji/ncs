@@ -3,7 +3,7 @@ from gqe.operator_pool.op import ListablePool
 from qswift.sequence import Sequence
 from qswift.initializer import CircuitInitializer
 from qwrapper.obs import Hamiltonian
-from gqe.util import get_device
+from gqe.common.util import get_device
 import torch, numpy as np
 
 

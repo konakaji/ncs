@@ -1,5 +1,5 @@
 from experiment.base import GPTQETaskBase
-from gqe.mingpt.data import EnergyDataset
+from gqe.gptqe_model.data import EnergyDataset
 from qwrapper.operator import PauliTimeEvolution
 import matplotlib.pyplot as plt
 

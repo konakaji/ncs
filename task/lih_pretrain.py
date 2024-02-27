@@ -1,5 +1,5 @@
 from experiment.experiment import LiHExperiment
-from gptqe_task.lih import get_lih_configs
+from task.lih import get_lih_configs
 from torch.utils.data import DataLoader
 from gqe.mingpt.data import EnergyDataset
 

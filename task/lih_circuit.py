@@ -1,7 +1,7 @@
 from experiment.experiment import LiHExperiment
 from experiment.circuit import OptimalCircuitWriter
-from gqe.gptqe.data import EnergyDataset
-from gptqe_task.lih import get_lih_configs
+from gqe.gptqe_model.data import EnergyDataset
+from task.lih import get_lih_configs
 
 cfg = get_lih_configs()
 

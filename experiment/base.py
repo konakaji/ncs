@@ -2,26 +2,29 @@ import json
 import os.path
 import random
 import sys
-
-import numpy, math
+import numpy
+import math
 import torch
 import lightning as L
 import wandb
 import matplotlib.pyplot as p
-from gqe.gptqe.transformer import Transformer
 from pytorch_lightning.loggers import WandbLogger
 from abc import ABC, abstractmethod
-from gqe.operator_pool.uccsd import UCCSD
+from datetime import datetime
+
 from qwrapper.hamiltonian import compute_ground_state
 from qwrapper.obs import PauliObservable
+from qswift.compiler import DefaultOperatorPool
+
+from gqe.gptqe_model.transformer import Transformer
 from gqe.common.initializer import HFStateInitializer
 from gqe.common.util import to_hash
-from qswift.compiler import DefaultOperatorPool
-from gqe.mingpt.cost import EnergyCost
-from gqe.gptqe.monitor import FileMonitor
-from gqe.util import get_device
-from datetime import datetime
-from benchmark.molecule import DiatomicMolecularHamiltonian
+from gqe.gptqe_model.cost import EnergyCost
+from gqe.gptqe_model.monitor import FileMonitor
+from gqe.common.util import get_device
+from gqe.operator_pool.uccsd import UCCSD
+
+from experiment.molecule import DiatomicMolecularHamiltonian
 from experiment.const import *
 from experiment.temperature import *
 
@@ -171,9 +174,9 @@ class GPTQETaskBase(ABC):
         return path
 
     def construct_cost(self, distance, cfg, print_exact=True):
-        molecule = self.get_molecule(distance, cfg)
+        molecule = self.get_molecule(distance, cfg.is_bravyi)
 
-        hamiltonian = self.get_hamiltonian(molecule, cfg)
+        hamiltonian = self.get_hamiltonian(molecule, cfg.nqubit, cfg.is_bravyi)
         if print_exact:
             k = '.' + to_hash(hamiltonian)
             if os.path.exists(k):
@@ -197,12 +200,12 @@ class GPTQETaskBase(ABC):
         maker = FigureMaker(self)
         maker.run(cfg, computed_energies, errors)
 
-    def get_hamiltonian(self, molecule, cfg):
-        hamiltonian = DiatomicMolecularHamiltonian(cfg.nqubit, molecule, bravyi_kitaev=cfg.is_bravyi)
+    def get_hamiltonian(self, molecule, nqubit, is_bravyi):
+        hamiltonian = DiatomicMolecularHamiltonian(nqubit, molecule, bravyi_kitaev=is_bravyi)
         return hamiltonian
 
     @abstractmethod
-    def get_molecule(self, distance, cfg):
+    def get_molecule(self, distance, is_bravyi):
         pass
 
     def _get_operator_pool(self, molecule, cfg):

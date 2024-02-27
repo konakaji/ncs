@@ -2,7 +2,7 @@ import torch
 from torch.nn import functional as F
 from transformers import GPT2LMHeadModel, GPT2Config
 from lightning import LightningModule
-from gqe.util import get_device
+from gqe.common.util import get_device
 
 
 class SmallConfig(GPT2Config):

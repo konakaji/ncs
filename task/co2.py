@@ -11,15 +11,15 @@ def get_co2_configs():
     cfg.n_electrons = 10
     cfg.energy_offset = 184
     cfg.nqubit = 18
-    cfg.temperature = 10
+    cfg.temperature = 20
     cfg.del_temperature = 0.1
     cfg.molecule_name = "CO2"
-    cfg.tool = "cudaq"
+    cfg.tool = "qulacs"
     cfg.print_exact = False
     return cfg
 
 
 if __name__ == '__main__':
     cfg = get_co2_configs()
-    cfg.seed = 1
+    cfg.seed = 2
     CO2Experiment().train(cfg)

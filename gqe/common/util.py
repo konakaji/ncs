@@ -2,6 +2,7 @@ from qwrapper.operator import ControllablePauli
 from qwrapper.hamiltonian import Hamiltonian
 from openfermion import FermionOperator
 from torch.utils.data import Dataset
+import hashlib
 import random, torch
 
 

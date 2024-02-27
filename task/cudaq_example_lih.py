@@ -15,7 +15,7 @@ from qwrapper.optimizer import AdamOptimizer, UnitLRScheduler, PrintMonitor, Fil
 from qwrapper.hamiltonian import compute_ground_state
 from qswift.compiler import Compiler
 from gqe.operator_pool.uccsd import UCCSD, generate_molecule
-from benchmark.molecule import DiatomicMolecularHamiltonian
+from experiment.molecule import DiatomicMolecularHamiltonian
 
 cudaq.set_target('nvidia')
 

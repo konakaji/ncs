@@ -11,4 +11,5 @@ pip uninstall jax
 pip uninstall jaxlib
 pip install autograd
 pip install numpy==1.23.0
+pip install cupy-cuda12x
 pip install cuda-quantum

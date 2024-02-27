@@ -174,9 +174,9 @@ class GPTQETaskBase(ABC):
         return path
 
     def construct_cost(self, distance, cfg, print_exact=True):
-        molecule = self.get_molecule(distance, cfg)
+        molecule = self.get_molecule(distance, cfg.is_bravyi)
 
-        hamiltonian = self.get_hamiltonian(molecule, cfg)
+        hamiltonian = self.get_hamiltonian(molecule, cfg.nqubit, cfg.is_bravyi)
         if print_exact:
             k = '.' + to_hash(hamiltonian)
             if os.path.exists(k):
@@ -200,12 +200,12 @@ class GPTQETaskBase(ABC):
         maker = FigureMaker(self)
         maker.run(cfg, computed_energies, errors)
 
-    def get_hamiltonian(self, molecule, cfg):
-        hamiltonian = DiatomicMolecularHamiltonian(cfg.nqubit, molecule, bravyi_kitaev=cfg.is_bravyi)
+    def get_hamiltonian(self, molecule, nqubit, is_bravyi):
+        hamiltonian = DiatomicMolecularHamiltonian(nqubit, molecule, bravyi_kitaev=is_bravyi)
         return hamiltonian
 
     @abstractmethod
-    def get_molecule(self, distance, cfg):
+    def get_molecule(self, distance, is_bravyi):
         pass
 
     def _get_operator_pool(self, molecule, cfg):

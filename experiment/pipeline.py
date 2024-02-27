@@ -3,7 +3,6 @@ from abc import abstractmethod, ABC
 from vqe.initializer import PQCInitializer
 from experiment.finetune import InitializerDelegate
 
-
 class Task(ABC):
     def __init__(self) -> None:
         super().__init__()

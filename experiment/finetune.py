@@ -1,8 +1,23 @@
 from vqe.initializer import VQAInitializer
 from qswift.initializer import CircuitInitializer
 from qswift.sequence import Sequence
-from vqe.pqc import TimeEvolutionPQC
+from vqe.pqc import TimeEvolutionPQC, PQC
 from qwrapper.circuit import init_circuit
+
+class PQCInitializer(CircuitInitializer):
+    def __init__(self, original: CircuitInitializer, pqc: PQC = None):
+        self.original = original
+        self.pqc = pqc
+
+    def init_circuit(self, nqubit, ancilla, tool):
+        qc = self.original.init_circuit(nqubit, ancilla, tool)
+        if self.pqc is not None:
+            self.pqc.add(qc)
+        return qc
+
+    def initial_state(self, dim):
+        raise NotImplementedError()
+
 
 
 class InitializerDelegate(VQAInitializer):

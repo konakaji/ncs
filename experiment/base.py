@@ -16,11 +16,11 @@ from qwrapper.hamiltonian import compute_ground_state
 from qwrapper.obs import PauliObservable
 from qswift.compiler import DefaultOperatorPool
 
-from gqe.gptqe.transformer import Transformer
+from gqe.gptqe_model.transformer import Transformer
 from gqe.common.initializer import HFStateInitializer
 from gqe.common.util import to_hash
-from gqe.gptqe.cost import EnergyCost
-from gqe.gptqe.monitor import FileMonitor
+from gqe.gptqe_model.cost import EnergyCost
+from gqe.gptqe_model.monitor import FileMonitor
 from gqe.util import get_device
 from gqe.operator_pool.uccsd import UCCSD
 

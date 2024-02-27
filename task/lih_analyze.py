@@ -1,6 +1,6 @@
 import lightning as L
 import torch
-from gqe.gptqe.transformer import Transformer
+from gqe.gptqe_model.transformer import Transformer
 from task.lih import get_lih_configs
 
 fabric = L.Fabric(accelerator="auto")

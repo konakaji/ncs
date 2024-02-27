@@ -1,5 +1,5 @@
 import sys
-from gqe.gptqe.data import TrajectoryData
+from gqe.gptqe_model.data import TrajectoryData
 
 
 class FileMonitor:

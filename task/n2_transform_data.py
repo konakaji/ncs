@@ -1,7 +1,7 @@
-from gqe.gptqe.data import EnergyDataset
+from gqe.gptqe_model.data import EnergyDataset
 from experiment.configs import get_default_configs
 from experiment.experiment import N2Experiment
-from gqe.gptqe.data import TrajectoryData
+from gqe.gptqe_model.data import TrajectoryData
 
 
 def get_n2_configs():

@@ -12,6 +12,7 @@ def get_o2_configs():
     cfg.energy_offset = 147
     cfg.nqubit = 12
     cfg.del_temperature = 0.1
+    cfg.temperature = 20
     cfg.molecule_name = "O2"
     return cfg
 

@@ -22,6 +22,7 @@ def get_default_pretrain_configs():
 
 def get_default_configs():
     cfg = ConfigDict()
+    cfg.tool = "qulacs"
     cfg.verbose = False
     cfg.save_data = False
     cfg.print_exact = True

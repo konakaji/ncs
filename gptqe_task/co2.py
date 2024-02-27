@@ -14,6 +14,7 @@ def get_co2_configs():
     cfg.temperature = 10
     cfg.del_temperature = 0.1
     cfg.molecule_name = "CO2"
+    cfg.tool = "cudaq"
     cfg.print_exact = False
     return cfg
 

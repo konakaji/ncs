@@ -1,5 +1,3 @@
-
-
 import torch
 import os
 import sys
@@ -10,33 +8,36 @@ import timeit
 import cudaq
 import numpy as np
 import random
-from gqe.energy_estimator.iid import IIDEstimator
+from gqe.naive_model.energy_estimator.iid import IIDEstimator
 from gqe.naive_model.simple.model import SimpleModel, Ansatz
 from gqe.common.initializer import HFStateInitializer
 from qwrapper.optimizer import AdamOptimizer, UnitLRScheduler, PrintMonitor, FileMonitor
 from qwrapper.hamiltonian import compute_ground_state
 from qswift.compiler import Compiler
 from gqe.operator_pool.uccsd import UCCSD, generate_molecule
-from benchmark.molecule import DiatomicMolecularHamiltonian
+from experiment.molecule import DiatomicMolecularHamiltonian
 
-N = 8000
-n_sample = 1000
-iter = 1000
+cudaq.set_target('nvidia')
+
+N = 40  # n_gates
+n_sample = 50
+iter = 500
 lam = 30
-nqubit = 4
-seed = 30
+nqubit = 10
+seed = 3047
 # choices of the distance between two atoms
-distances = [0.5, 0.6, 0.7, 0.7414, 0.8, 0.9, 1.0, 1.5, 2.0]
+distances = [1.0, 1.5, 1.57, 2.0, 2.5, 3.0]
 
 random.seed(seed)
 np.random.seed(seed)
 torch.manual_seed(seed)
 torch.cuda.manual_seed_all(seed)
 
-
-MODEL_FILEBASE = '../saved_models/model_h2_sto3g_{}_{}.json'
-ENERGY_FILEBASE = 'energy_h2_sto3g_{}_{}.txt'
-OTHER_FILEBASE = '../output/other_h2_sto3g_{}_{}.json'
+# PRAO: check the location of these files again
+MODEL_FILEBASE = '../saved_models/model_lih_sto3g_{}_{}_{}.json'
+ENERGY_FILEBASE = 'energy_lih_sto3g_{}_{}_{}.txt'
+TRAJECTORY_FILEBASE = '../output/{}_trajectory_lih_sto3g_{}_{}_{}.txt'
+OTHER_FILEBASE = '../output/other_lih_sto3g_{}_{}_{}.json'
 
 
 class MyQSwiftExecutor:
@@ -69,7 +70,7 @@ class MyQSwiftExecutor:
 
         if numQpus > 1:
             values = [c * v.get().expectation_z() for (c, v) in values]
-        
+
         end = timeit.default_timer()
         if len(values):
             print('Time = {} sec, G = {}'.format(end-start, np.sum(values)))
@@ -80,23 +81,27 @@ class MyQSwiftExecutor:
 
 def find_ground_state_energy(distance, seed, ignore_cache=False):
 
-    molecule = generate_molecule("H", "H", distance, "sto-3g")
+    transformation = 'jordan-wigner'
+    is_bravyi = transformation == 'bravyi-kitaev'
+    molecule = generate_molecule("Li", "H", distance, "sto-3g", bravyi_kitaev=is_bravyi)
     # prepare file
-    model_output = MODEL_FILEBASE.format(str(distance), seed)
-    energy_output = ENERGY_FILEBASE.format(str(distance), seed)
-    other_output = OTHER_FILEBASE.format(str(distance), seed)
+    # PRAO: figure out how to do the tranformation for the seed
+    model_output = MODEL_FILEBASE.format(str(distance), transformation, seed)
+    energy_output = ENERGY_FILEBASE.format(str(distance), transformation, seed)
+    other_output = OTHER_FILEBASE.format(str(distance), transformation, seed)
+    trajectory_output = TRAJECTORY_FILEBASE.format(model_output, str(distance), transformation, seed)
 
     if not ignore_cache and os.path.exists(model_output):
         return
 
     # prepare Hamiltonian
-    hamiltonian = DiatomicMolecularHamiltonian(nqubit, molecule)
+    hamiltonian = DiatomicMolecularHamiltonian(nqubit, molecule, bravyi_kitaev=is_bravyi)
 
     ge = compute_ground_state(hamiltonian)
     print("ground state:", ge)
 
     # prepare operator_pool
-    uccsd = UCCSD(4, molecule)
+    uccsd = UCCSD(nqubit, molecule)
     paulis = uccsd.paulis
     num_operators = len(paulis)
     ansatz = Ansatz([random.gauss(0, 1) for _ in range(num_operators)],
@@ -138,4 +143,9 @@ def find_ground_state_energy(distance, seed, ignore_cache=False):
         f.write(json.dumps(m))
 
 
-find_ground_state_energy(.7474, seed, ignore_cache=False)
+
+
+print (distances)
+print (seed)
+for d in distances:
+    find_ground_state_energy(d, seed, ignore_cache=False)

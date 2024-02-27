@@ -3,7 +3,7 @@ import math
 from qwrapper.obs import Pauli, Hamiltonian
 from scipy.linalg import expm
 from gqe.energy_estimator.qswift import *
-from gqe.simple_model.model import *
+from gqe.naive_model.simple.model import *
 from qswift.compiler import *
 from qswift.initializer import XBasisInitializer
 from qwrapper.sampler import FasterImportantSampler

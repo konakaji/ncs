@@ -2,27 +2,31 @@ import json
 import os.path
 import random
 import sys
-
-import numpy, math
+import numpy
+import math
 import torch
 import lightning as L
 import wandb
 import matplotlib.pyplot as p
-from gqe.gptqe.transformer import Transformer
 from pytorch_lightning.loggers import WandbLogger
 from abc import ABC, abstractmethod
-from gqe.operator_pool.uccsd import UCCSD
+from datetime import datetime
+
 from qwrapper.hamiltonian import compute_ground_state
 from qwrapper.obs import PauliObservable
+from qswift.compiler import DefaultOperatorPool
+
+from gqe.gptqe_model.transformer import Transformer
 from gqe.common.initializer import HFStateInitializer
 from gqe.common.util import to_hash
-from qswift.compiler import DefaultOperatorPool
-from gqe.mingpt.cost import EnergyCost
-from gqe.gptqe.monitor import FileMonitor
-from gqe.util import get_device
-from datetime import datetime
-from benchmark.molecule import DiatomicMolecularHamiltonian
+from gqe.gptqe_model.cost import EnergyCost
+from gqe.gptqe_model.monitor import FileMonitor
+from gqe.common.util import get_device
+from gqe.operator_pool.uccsd import UCCSD
+
+from experiment.molecule import DiatomicMolecularHamiltonian
 from experiment.const import *
+from experiment.temperature import *
 
 
 def key(distance):
@@ -31,6 +35,9 @@ def key(distance):
 
 
 class GPTQETaskBase(ABC):
+    def __init__(self, temperature_scheduler: TemperatureScheduler = None) -> None:
+        self.temperature_scheduler = temperature_scheduler
+
     def train(self, cfg):
         fabric = L.Fabric(accelerator="auto", loggers=[self._get_logger(cfg)])
         fabric.seed_everything(cfg.seed)
@@ -53,7 +60,7 @@ class GPTQETaskBase(ABC):
         with open(filename, 'w') as f:
             for distance in distances:
                 print("distance:", distance)
-                if distance in m:
+                if cfg.cache and distance in m:
                     min_energy = m[distance]
                     print("already computed, skipped", distance)
                 else:
@@ -119,7 +126,10 @@ class GPTQETaskBase(ABC):
             fabric.clip_gradients(model, optimizer, max_norm=cfg.grad_norm_clip)
             optimizer.step()
             # scheduler.step()
-            model.temperature += cfg.del_temperature
+            if self.temperature_scheduler is not None:
+                model.temperature = self.temperature_scheduler.get(epoch)
+            else:
+                model.temperature += cfg.del_temperature
         model.set_cost(None)
         # state = {"model": model, "optimizer": optimizer, "hparams": model.hparams}
         # fabric.save(cfg.save_dir + f"checkpoint_{distance}.ckpt", state)
@@ -164,9 +174,9 @@ class GPTQETaskBase(ABC):
         return path
 
     def construct_cost(self, distance, cfg, print_exact=True):
-        molecule = self.get_molecule(distance, cfg)
+        molecule = self.get_molecule(distance, cfg.is_bravyi)
 
-        hamiltonian = self.get_hamiltonian(molecule, cfg)
+        hamiltonian = self.get_hamiltonian(molecule, cfg.nqubit, cfg.is_bravyi)
         if print_exact:
             k = '.' + to_hash(hamiltonian)
             if os.path.exists(k):
@@ -179,22 +189,23 @@ class GPTQETaskBase(ABC):
                     f.write(str(ge))
             print("ground state:", ge)
         initializer = HFStateInitializer(n_electrons=cfg.n_electrons)
-        scf = hamiltonian.exact_value(initializer.init_circuit(cfg.nqubit, [], "qulacs"))
+        scf = hamiltonian.exact_value(initializer.init_circuit(cfg.nqubit, [], tool=cfg.tool))
         print("hf state:", scf)
+        print("identity:", hamiltonian._identity)
         pool = self._get_operator_pool(molecule, cfg)
-        cost = EnergyCost(hamiltonian, initializer, pool, cfg.time_pool)
+        cost = EnergyCost(hamiltonian, initializer, pool, cfg.time_pool, tool=cfg.tool)
         return cost
 
     def plot_figure(self, cfg, computed_energies, errors=None):
         maker = FigureMaker(self)
         maker.run(cfg, computed_energies, errors)
 
-    def get_hamiltonian(self, molecule, cfg):
-        hamiltonian = DiatomicMolecularHamiltonian(cfg.nqubit, molecule, bravyi_kitaev=cfg.is_bravyi)
+    def get_hamiltonian(self, molecule, nqubit, is_bravyi):
+        hamiltonian = DiatomicMolecularHamiltonian(nqubit, molecule, bravyi_kitaev=is_bravyi)
         return hamiltonian
 
     @abstractmethod
-    def get_molecule(self, distance, cfg):
+    def get_molecule(self, distance, is_bravyi):
         pass
 
     def _get_operator_pool(self, molecule, cfg):
@@ -301,7 +312,7 @@ class Exact:
                     molecule = self.task.get_molecule(d, cfg)
                     hamiltonian = self.task.get_hamiltonian(molecule, cfg)
                     ge = compute_ground_state(hamiltonian)
-                    scf = hamiltonian.exact_value(initializer.init_circuit(cfg.nqubit, [], "qulacs"))
+                    scf = hamiltonian.exact_value(initializer.init_circuit(cfg.nqubit, [], cfg.tool))
                     f.write(f"{d}\t{ge}\t{scf}\n")
         ds = []
         with open(gs_file) as f:

@@ -10,14 +10,14 @@ import timeit
 import cudaq
 import numpy as np
 import random
-from gqe.energy_estimator.iid import IIDEstimator
+from gqe.naive_model.energy_estimator.iid import IIDEstimator
 from gqe.naive_model.simple.model import SimpleModel, Ansatz
 from gqe.common.initializer import HFStateInitializer
 from qwrapper.optimizer import AdamOptimizer, UnitLRScheduler, PrintMonitor, FileMonitor
 from qwrapper.hamiltonian import compute_ground_state
 from qswift.compiler import Compiler
 from gqe.operator_pool.uccsd import UCCSD, generate_molecule
-from benchmark.molecule import DiatomicMolecularHamiltonian
+from experiment.molecule import DiatomicMolecularHamiltonian
 
 N = 8000
 n_sample = 1000
@@ -68,7 +68,7 @@ class MyQSwiftExecutor:
             f"evaluate ({len(swift_channels)}): {time.time() - middle}")
 
         if numQpus > 1:
-            values = [c * v.get().expectation_z() for (c, v) in values]
+            values = [v.get() for v in values]
         
         end = timeit.default_timer()
         if len(values):

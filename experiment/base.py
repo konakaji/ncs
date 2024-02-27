@@ -60,7 +60,7 @@ class GPTQETaskBase(ABC):
         with open(filename, 'w') as f:
             for distance in distances:
                 print("distance:", distance)
-                if distance in m:
+                if cfg.cache and distance in m:
                     min_energy = m[distance]
                     print("already computed, skipped", distance)
                 else:

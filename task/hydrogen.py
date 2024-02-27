@@ -12,6 +12,7 @@ def get_hydrogen_cfg():
     cfg.verbose = False
     cfg.temperature = 5
     cfg.molecule_name = "H2"
+    cfg.cache = False
     return cfg
 
 

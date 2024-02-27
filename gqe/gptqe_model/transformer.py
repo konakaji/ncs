@@ -3,7 +3,7 @@ from torch.nn import functional as F
 from transformers import GPT2LMHeadModel, GPT2Config
 from lightning import LightningModule
 from gqe.common.util import get_device
-
+from gqe.gptqe_model.loss import ExpLogitMatching, GFlowLogitMatching
 
 class SmallConfig(GPT2Config):
 
@@ -12,7 +12,7 @@ class SmallConfig(GPT2Config):
 
 
 class Transformer(LightningModule):
-    def __init__(self, cfg, label, small=False):
+    def __init__(self, cfg, label, loss=None, small=False):
         super().__init__()
         self._label = label
         self.cfg = cfg
@@ -21,12 +21,11 @@ class Transformer(LightningModule):
             gpt2cfg = SmallConfig(**{k: cfg[k] for k in GPT2Config().to_dict().keys() & cfg.keys()})
         self.transformer = GPT2LMHeadModel(gpt2cfg).to(get_device())
         self.ngates = cfg.ngates
-        self.energy_offset = cfg.energy_offset
         self.num_samples = cfg.num_samples
         self.temperature = cfg.temperature
         self.save_hyperparameters()
         self._starting_idx = torch.zeros(cfg.num_samples, 1, dtype=torch.int, device=get_device())
-        self.loss_fn = torch.nn.MSELoss()
+        self.loss = GFlowLogitMatching(cfg.energy_offset, get_device(), self._label, self)
 
     def generate_logits(self, idx):
         logits = self.transformer(idx)[0]
@@ -49,10 +48,7 @@ class Transformer(LightningModule):
             idx_output, logits_base = self.generate()
             energies = self._cost.energy(idx_output)
         logits_tensor = self.gather(idx_output, logits_base)
-        mean_logits = torch.mean(logits_tensor, 1)
-        log_values[f"mean_logits at {self._label}"] = torch.mean(mean_logits - self.energy_offset)
-        log_values[f"mean energy at {self._label}"] = torch.mean(energies)
-        loss = self.loss_fn(torch.exp(-mean_logits), torch.exp(-energies - self.energy_offset))
+        loss = self.loss.compute(energies, logits_tensor, self.temperature, log_values)
         log_values[f"loss at {self._label}"] = loss
         return loss, energies, idx_output, log_values
 

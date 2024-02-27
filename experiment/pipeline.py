@@ -1,6 +1,5 @@
 from experiment.base import GPTQETaskBase
 from abc import abstractmethod, ABC
-from vqe.initializer import PQCInitializer
 from experiment.finetune import InitializerDelegate
 
 class Task(ABC):
@@ -40,15 +39,15 @@ class TrainSingleTask(Task):
         context["energy"] = energy
 
 
-class FineTuneTask(Task):
-    def __init__(self, hamiltonian) -> None:
-        super().__init__()
-        self.hamiltonian = hamiltonian
+# class FineTuneTask(Task):
+#     def __init__(self, hamiltonian) -> None:
+#         super().__init__()
+#         self.hamiltonian = hamiltonian
 
-    def run(self, context: map):
-        cfg = context["cfg"]
-        pqc = TimeEvolutionPQC(self.hamiltonian.nqubit)
-        vqe = VQE(Energy(self.hamiltonian, self.hamiltonian.nqubit, pqc),
-                       InitializerDelegate(initializer, self.hamiltonian.nqubit, cfg.tool), optimizer)
+#     def run(self, context: map):
+#         cfg = context["cfg"]
+#         pqc = TimeEvolutionPQC(self.hamiltonian.nqubit)
+#         vqe = VQE(Energy(self.hamiltonian, self.hamiltonian.nqubit, pqc),
+#                        InitializerDelegate(initializer, self.hamiltonian.nqubit, cfg.tool), optimizer)
 
 

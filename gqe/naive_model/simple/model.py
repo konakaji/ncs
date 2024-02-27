@@ -5,7 +5,7 @@ from qwrapper.optimizer import AdamOptimizer
 from qwrapper.operator import ControllablePauli
 from qwrapper.sampler import FasterImportantSampler
 from qswift.compiler import DefaultOperatorPool
-from gqe.energy_estimator.iid import IIDEstimator
+from gqe.naive_model.energy_estimator.iid import IIDEstimator
 from gqe.util import identity
 
 

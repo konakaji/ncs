@@ -10,8 +10,8 @@ import timeit
 import cudaq
 import numpy as np
 import random
-from gqe.energy_estimator.iid import IIDEstimator
-from gqe.simple_model.model import SimpleModel, Ansatz
+from gqe.naive_model.energy_estimator.iid import IIDEstimator
+from gqe.naive_model.simple.model import SimpleModel, Ansatz
 from gqe.common.initializer import HFStateInitializer
 from qwrapper.optimizer import AdamOptimizer, UnitLRScheduler, PrintMonitor, FileMonitor
 from qwrapper.hamiltonian import compute_ground_state

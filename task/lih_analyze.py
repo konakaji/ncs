@@ -1,7 +1,7 @@
 import lightning as L
 import torch
 from gqe.gptqe.transformer import Transformer
-from gptqe_task.lih import get_lih_configs
+from task.lih import get_lih_configs
 
 fabric = L.Fabric(accelerator="auto")
 fabric.launch()

@@ -31,7 +31,7 @@ def key(distance):
     return v
 
 
-class GPTQETaskBase(ABC):
+class GPTQETaskBase(Task, ABC):
     def __init__(self, temperature_scheduler: TemperatureScheduler = None) -> None:
         self.temperature_scheduler = temperature_scheduler
 

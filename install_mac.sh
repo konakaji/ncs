@@ -1,5 +1,9 @@
-pip install -r requirements_mac.txt
-# For tequila
-pip uninstall jax
-pip uninstall jaxlib
-pip install autograd
+pip install -r requirements_pt1.txt
+cd qwrapper
+pip install -r requirements.txt
+pip install .
+cd ../qswift
+pip install -r requirements.txt
+pip install .
+cd ..
+pip install -r requirements_pt2.txt

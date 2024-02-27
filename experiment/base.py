@@ -21,7 +21,7 @@ from gqe.common.initializer import HFStateInitializer
 from gqe.common.util import to_hash
 from gqe.gptqe_model.cost import EnergyCost
 from gqe.gptqe_model.monitor import FileMonitor
-from gqe.util import get_device
+from gqe.common.util import get_device
 from gqe.operator_pool.uccsd import UCCSD
 
 from experiment.molecule import DiatomicMolecularHamiltonian

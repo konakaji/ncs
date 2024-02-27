@@ -2,9 +2,6 @@ pip install -r requirements_pt1.txt
 cd qwrapper
 pip install -r requirements.txt
 pip install .
-cd ../qml
-pip install -r requirements.txt
-pip install .
 cd ../qswift
 pip install -r requirements.txt
 pip install .

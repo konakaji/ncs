@@ -1,6 +1,6 @@
 import torch
 from torch.utils.data import Dataset
-from gqe.util import get_device
+from gqe.common.util import get_device
 import json
 import sys
 

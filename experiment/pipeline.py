@@ -1,7 +1,7 @@
 from experiment.base import GPTQETaskBase
 from abc import abstractmethod, ABC
-from gqe.common.initializer import PQCInitializer
-from gqe.vqa.initializer import InitializerDelegate
+from vqe.initializer import PQCInitializer
+from experiment.finetune import InitializerDelegate
 
 
 class Task(ABC):

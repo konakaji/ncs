@@ -6,7 +6,7 @@ from qwrapper.operator import ControllablePauli
 from qwrapper.sampler import FasterImportantSampler
 from qswift.compiler import DefaultOperatorPool
 from gqe.naive_model.energy_estimator.iid import IIDEstimator
-from gqe.util import identity
+from gqe.common.util import identity
 
 
 class Ansatz:

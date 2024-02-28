@@ -37,23 +37,19 @@ bash install_mac.sh
 We did not test for the other environments, so please first try ```bash install_mac.sh```, and report if there are any errors.
 
 ## Usage 
-### Important modules
+
 ```
+# At the project root
+export PYTHONPATH=`pwd`
 cd task
 python hydrogen.py
 ```
 
 ## Built With
-The following repositories are used:
+The following submodules are used:
 - https://github.com/konakaji/qwrapper 
-  - For quantum circuit simulation.
 - https://github.com/konakaji/qswift
-  - For iid model.
 
 ## License
 
 This project is licensed under the MIT License - see the LICENSE.md file for details.
-
-## Acknowledgments
-
-- GPT model will be added soon.

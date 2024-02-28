@@ -13,6 +13,7 @@ def get_hydrogen_cfg():
     cfg.temperature = 5
     cfg.molecule_name = "H2"
     cfg.cache = False
+    cfg.tool = "qiskit"
     return cfg
 
 

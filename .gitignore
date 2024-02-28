@@ -30,7 +30,7 @@
 *.a
 *.lib
 
-**/Output/
+#**/Output/
 **/.lit*.txt
 
 # Executables

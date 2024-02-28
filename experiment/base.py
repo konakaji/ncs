@@ -193,7 +193,7 @@ class GPTQETaskBase(ABC):
         print("hf state:", scf)
         print("identity:", hamiltonian._identity)
         pool = self._get_operator_pool(molecule, cfg)
-        cost = EnergyCost(hamiltonian, initializer, pool, cfg.time_pool, tool=cfg.tool)
+        cost = EnergyCost(hamiltonian, initializer, pool, cfg.time_pool, nshot=cfg.nshot, tool=cfg.tool)
         return cost
 
     def plot_figure(self, cfg, computed_energies, errors=None):

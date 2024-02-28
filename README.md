@@ -19,22 +19,24 @@ git clone --recurse-submodule git@github.com:konakaji/gqe.git
 
 ### Installation
 
+#### Step 1
 ```
 conda create -n gqe python=3.10
 ```
 
-#### For Linux
+#### Step 2
+- For Linux
 
 ```
 bash install_linux.sh
 ```
 
-#### For Mac with M1 chip
+- For Mac with M1 chip
 ```
 bash install_mac.sh
 ```
 
-We did not test for the other environments. Please first try 'bash install_mac.sh', and report if there are any errors.
+- For the other environment: we did not test for the other environments. Please first try 'bash install_mac.sh', and report if there are any errors.
 
 ## Usage 
 

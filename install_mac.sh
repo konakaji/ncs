@@ -1,3 +1,4 @@
+pip install cmake
 pip install -r requirements_pt1.txt
 cd qwrapper
 pip install -r requirements.txt

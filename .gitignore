@@ -97,7 +97,6 @@ task/*.hdf5
 task/checkpoints
 .*
 *.hdf5
-output
 wandb
 checkpoints
 *.out

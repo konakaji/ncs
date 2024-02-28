@@ -34,7 +34,7 @@ bash install_linux.sh
 bash install_mac.sh
 ```
 
-We did not test for the other environments, so please first try ```bash install_mac.sh```, and report if there are any errors.
+We did not test for the other environments. Please first try 'bash install_mac.sh', and report if there are any errors.
 
 ## Usage 
 

@@ -12,7 +12,7 @@ class SmallConfig(GPT2Config):
 
 
 class Transformer(LightningModule):
-    def __init__(self, cfg, label, loss=None, small=False):
+    def __init__(self, cfg, label, loss="exp", small=False):
         super().__init__()
         self._label = label
         self.cfg = cfg
@@ -25,7 +25,10 @@ class Transformer(LightningModule):
         self.temperature = cfg.temperature
         self.save_hyperparameters()
         self._starting_idx = torch.zeros(cfg.num_samples, 1, dtype=torch.int, device=get_device())
-        self.loss = GFlowLogitMatching(cfg.energy_offset, get_device(), self._label, self)
+        if loss == "exp":
+            self.loss = ExpLogitMatching(cfg.energy_offset, self._label)
+        else:
+            self.loss = GFlowLogitMatching(cfg.energy_offset, get_device(), self._label, self)
 
     def generate_logits(self, idx):
         logits = self.transformer(idx)[0]

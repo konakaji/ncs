@@ -11,8 +11,8 @@ def get_hydrogen_cfg():
     cfg.n_electrons = 2
     cfg.verbose = False
     cfg.temperature = 5
-    cfg.nshot = 100
-    cfg.tool = "qiskit"
+    cfg.nshot = 0
+    cfg.tool = "qulacs"
     cfg.molecule_name = "H2"
     cfg.cache = False
     cfg.tool = "qiskit"

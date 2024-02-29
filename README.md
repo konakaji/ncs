@@ -15,6 +15,7 @@ These instructions will get you a copy of the project up and running on your loc
 ### Download
 ```
 git clone --recurse-submodule git@github.com:konakaji/gqe.git
+git submodule update --force --recursive --init --remote # If you fail to fetch the submodules.
 ```
 
 ### Installation

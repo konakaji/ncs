@@ -40,13 +40,16 @@ bash install_mac.sh
 - For the other environment: we did not test for the other environments. Please first try 'bash install_mac.sh', and report if there are any errors.
 
 ## Usage 
-
+### First example run
 ```
 # At the project root
 export PYTHONPATH=`pwd`
 cd task
 python hydrogen.py
 ```
+
+### Others
+To be documented.
 
 ## Built With
 The following submodules are used:

@@ -88,7 +88,7 @@ class GPTQETaskBase(ABC):
         if cfg.dry:
             return None, None
         cfg.vocab_size = cost.vocab_size()
-        model = Transformer(cfg, distance, cfg.small)
+        model = Transformer(cfg, distance, loss="exp", small=cfg.small)
         model.set_cost(cost)
         optimizer = torch.optim.AdamW(model.parameters(), lr=cfg.lr)
         model, optimizer = fabric.setup(model, optimizer)

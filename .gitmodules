@@ -1,6 +1,6 @@
-[submodule "qwrapper"]
-	path = qwrapper
-	url = git@github.com:konakaji/qwrapper.git
 [submodule "qswift"]
 	path = qswift
 	url = git@github.com:konakaji/qswift.git
+[submodule "qwrapper"]
+	path = qwrapper
+	url = git@github.com:konakaji/qwrapper.git
